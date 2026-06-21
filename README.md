@@ -1,3 +1,12 @@
+---
+title: Redrob Ranker
+emoji: 🚀
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+pinned: false
+---
+
 # Redrob Candidate Ranker
 
 A hybrid, explainable candidate-ranking system built for the **Redrob Intelligent Candidate Discovery & Ranking Challenge**, targeting the *Senior AI Engineer — Founding Team* job description.
