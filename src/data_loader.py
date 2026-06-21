@@ -43,10 +43,36 @@ def iter_candidates(path: str) -> Iterator[Dict[str, Any]]:
         for rec in data:
             yield rec
 
+    elif suffixes.endswith(".csv"):
+        import pandas as pd
+        df = pd.read_csv(p)
+        for _, row in df.iterrows():
+            d = row.to_dict()
+            for k, v in d.items():
+                if isinstance(v, str) and (v.startswith('[') or v.startswith('{')):
+                    try:
+                        d[k] = json.loads(v)
+                    except json.JSONDecodeError:
+                        pass
+            yield d
+
+    elif suffixes.endswith(".xlsx") or suffixes.endswith(".xls"):
+        import pandas as pd
+        df = pd.read_excel(p)
+        for _, row in df.iterrows():
+            d = row.to_dict()
+            for k, v in d.items():
+                if isinstance(v, str) and (v.startswith('[') or v.startswith('{')):
+                    try:
+                        d[k] = json.loads(v)
+                    except json.JSONDecodeError:
+                        pass
+            yield d
+
     else:
         raise ValueError(
             f"Unrecognized candidate file extension for '{path}'. "
-            "Expected .json, .jsonl, or .jsonl.gz"
+            "Expected .json, .jsonl, .jsonl.gz, .csv, or .xlsx"
         )
 
 

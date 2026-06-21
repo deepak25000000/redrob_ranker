@@ -1,6 +1,7 @@
 numpy>=1.26
 scikit-learn>=1.3
 pandas>=2.0
+openpyxl>=3.1.0
 
 # Optional upgrade path — only needed if you enable the sentence-transformer
 # semantic backend via scripts/precompute_embeddings.py. Not required for the

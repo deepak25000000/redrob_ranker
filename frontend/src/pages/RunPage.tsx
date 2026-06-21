@@ -62,10 +62,12 @@ export default function RunPage() {
       window.clearTimeout(timeoutId);
 
       if (!res.ok) {
-        if (res.status >= 400 && res.status < 500) {
-          throw new Error("Couldn't read this file. Expected .json, .jsonl, or .jsonl.gz matching the candidate schema.");
-        }
-        throw new Error(`Server error: ${res.status}`);
+        let serverError = `Server error: ${res.status}`;
+        try {
+          const errData = await res.json();
+          if (errData.detail) serverError = errData.detail;
+        } catch (e) {}
+        throw new Error(serverError);
       }
 
       const data = await res.json();
@@ -169,7 +171,7 @@ export default function RunPage() {
           type="file"
           ref={fileInputRef}
           onChange={handleFileChange}
-          accept=".json,.jsonl,.gz"
+          accept=".json,.jsonl,.gz,.csv,.xlsx,.xls"
           className="sr-only"
         />
       </div>
