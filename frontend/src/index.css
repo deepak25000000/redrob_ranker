@@ -1,0 +1,252 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&family=IBM+Plex+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&family=IBM+Plex+Sans:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-paper text-ink font-body antialiased;
+  }
+  h1, h2, h3 {
+    @apply font-display font-medium;
+  }
+
+  :focus-visible {
+    outline: 2px solid theme('colors.evidence');
+    outline-offset: 3px;
+  }
+}
+
+@layer components {
+  .eyebrow {
+    @apply font-mono text-[11px] uppercase tracking-widest font-bold text-evidence;
+  }
+
+  .home-hero {
+    @apply grid gap-10 px-5 md:px-8 py-10 md:py-14 lg:grid-cols-[0.8fr_1.2fr] items-stretch;
+    min-height: calc(100vh - 73px);
+    background:
+      radial-gradient(circle at 12% 12%, rgba(217, 142, 43, 0.18), transparent 24rem),
+      linear-gradient(135deg, #111820 0%, #16202b 52%, #27313a 100%);
+    color: #f7f6f2;
+  }
+
+  .home-hero__copy {
+    @apply flex flex-col justify-center max-w-xl;
+  }
+
+  .home-hero__copy h1 {
+    @apply text-5xl md:text-6xl lg:text-7xl leading-[0.98] my-5;
+    letter-spacing: 0;
+  }
+
+  .home-hero__copy p {
+    @apply text-lg md:text-xl leading-relaxed text-card/80;
+  }
+
+  .home-hero__actions {
+    @apply flex flex-col sm:flex-row gap-3 mt-8;
+  }
+
+  .primary-action,
+  .secondary-action {
+    @apply inline-flex items-center justify-center px-5 py-3 text-sm font-bold transition-colors;
+  }
+
+  .primary-action {
+    @apply bg-evidence text-ink hover:bg-card disabled:cursor-wait disabled:opacity-70;
+  }
+
+  .secondary-action {
+    @apply border border-card/25 text-card hover:bg-card/10;
+  }
+
+  .demo-error {
+    @apply mt-5 border-l-4 border-caution bg-caution/15 p-4 text-sm text-card;
+  }
+
+  .demo-complete {
+    @apply mt-5 inline-flex w-fit font-mono text-xs font-bold text-evidence underline decoration-evidence/50 hover:text-card;
+  }
+
+  .pipeline-board {
+    @apply relative overflow-hidden border border-card/15 bg-ink/55 p-5 md:p-6 shadow-2xl;
+    border-radius: 8px;
+    box-shadow: inset 0 0 0 1px rgba(247, 246, 242, 0.04), 0 24px 70px rgba(0, 0, 0, 0.25);
+  }
+
+  .pipeline-board::before {
+    content: "";
+    @apply absolute inset-0 pointer-events-none;
+    background-image:
+      linear-gradient(rgba(247, 246, 242, 0.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(247, 246, 242, 0.045) 1px, transparent 1px);
+    background-size: 34px 34px;
+    mask-image: radial-gradient(circle at center, black, transparent 78%);
+  }
+
+  .pipeline-board--compact {
+    @apply bg-ink text-card;
+  }
+
+  .pipeline-board__header,
+  .pipeline-board__graph,
+  .pipeline-board__drawer {
+    @apply relative z-10;
+  }
+
+  .pipeline-board__header {
+    @apply flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-7;
+  }
+
+  .pipeline-board__status {
+    @apply flex flex-col gap-1 text-[11px] text-card/60 md:text-right;
+  }
+
+  .pipeline-board__status strong {
+    @apply text-evidence;
+  }
+
+  .pipeline-board__graph {
+    @apply grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-3 md:gap-4;
+  }
+
+  .pipeline-board__step {
+    @apply flex md:flex-col items-center gap-3 min-w-0;
+  }
+
+  .pipeline-node {
+    @apply w-full min-h-[124px] flex flex-col items-start justify-between gap-4 border border-card/15 bg-card/10 p-4 text-left text-card transition-colors;
+    border-radius: 8px;
+  }
+
+  .pipeline-node:hover,
+  .pipeline-node--active {
+    @apply border-evidence bg-evidence/15;
+    box-shadow: 0 0 24px rgba(217, 142, 43, 0.22);
+  }
+
+  .pipeline-node__icon {
+    @apply grid h-9 w-9 place-items-center border border-card/20 bg-ink/50 text-evidence;
+    border-radius: 50%;
+  }
+
+  .pipeline-node__label {
+    @apply text-sm font-bold leading-tight;
+  }
+
+  .pipeline-node__metric {
+    @apply text-[11px] text-card/55;
+  }
+
+  .pipeline-arrow {
+    @apply hidden md:block text-evidence/60 rotate-90 xl:rotate-0;
+  }
+
+  .pipeline-board__drawer {
+    @apply mt-6 grid gap-4 border border-card/15 bg-ink/70 p-5 md:grid-cols-[1fr_auto];
+    border-radius: 8px;
+  }
+
+  .pipeline-board__drawer p {
+    @apply mt-2 max-w-3xl text-sm leading-relaxed text-card/75;
+  }
+
+  .pipeline-board__numbers {
+    @apply flex flex-wrap md:flex-col gap-2 text-[11px] text-card/75 md:text-right;
+  }
+
+  .pipeline-board__numbers span,
+  .pipeline-board__evidence-link {
+    @apply border border-card/15 px-3 py-2;
+    border-radius: 999px;
+  }
+
+  .pipeline-board__evidence-link {
+    @apply text-evidence hover:text-card hover:border-evidence;
+  }
+
+  .pipeline-board__noscript {
+    @apply relative z-10 mt-4 text-sm text-card/75;
+  }
+
+  .work-section {
+    @apply px-5 md:px-8 py-16 md:py-24 max-w-6xl mx-auto w-full;
+  }
+
+  .work-section__intro {
+    @apply max-w-3xl mb-10;
+  }
+
+  .work-section__intro h2 {
+    @apply text-4xl md:text-5xl leading-tight mt-3 mb-5;
+  }
+
+  .work-section__intro p {
+    @apply text-lg leading-relaxed text-ink/75;
+  }
+
+  .work-grid {
+    @apply grid md:grid-cols-2 gap-px bg-rule border border-rule;
+  }
+
+  .work-grid article {
+    @apply bg-card p-7 md:p-8;
+  }
+
+  .work-grid span {
+    @apply text-evidence;
+  }
+
+  .work-grid h3 {
+    @apply text-2xl mt-4 mb-3;
+  }
+
+  .work-grid p {
+    @apply leading-relaxed text-ink/75;
+  }
+
+  .comparison-section {
+    @apply grid md:grid-cols-2 gap-px bg-rule border-y border-rule;
+  }
+
+  .comparison-card {
+    @apply bg-card px-5 md:px-10 py-10;
+  }
+
+  .comparison-card__dot {
+    @apply h-3 w-3 rounded-full mb-5;
+  }
+
+  .comparison-card--risk .comparison-card__dot {
+    @apply bg-caution;
+  }
+
+  .comparison-card--trust .comparison-card__dot {
+    @apply bg-trust;
+  }
+
+  .comparison-card h2 {
+    @apply text-2xl mb-5;
+  }
+
+  .comparison-card__sample {
+    @apply mb-6 border border-rule bg-paper p-4 text-xs leading-relaxed text-ink/80;
+  }
+
+  .comparison-card p {
+    @apply max-w-xl leading-relaxed text-ink/75;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.001ms !important;
+  }
+}

@@ -1,0 +1,55 @@
+"""
+data_loader.py — Reads candidate records from any of the formats the hackathon
+bundle ships in: pretty-printed .json (array), .jsonl, or .jsonl.gz.
+
+Streams where possible so a 100K-row / ~465MB uncompressed pool doesn't need to
+be held as a giant pretty-printed structure in memory at once.
+"""
+
+import gzip
+import json
+from pathlib import Path
+from typing import Iterator, Dict, Any
+
+
+def iter_candidates(path: str) -> Iterator[Dict[str, Any]]:
+    """Yield candidate dicts one at a time regardless of source format."""
+    p = Path(path)
+    suffixes = "".join(p.suffixes).lower()
+
+    if suffixes.endswith(".jsonl.gz"):
+        with gzip.open(p, "rt", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    yield json.loads(line)
+
+    elif suffixes.endswith(".jsonl"):
+        with open(p, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    yield json.loads(line)
+
+    elif suffixes.endswith(".json.gz"):
+        with gzip.open(p, "rt", encoding="utf-8") as f:
+            data = json.load(f)
+        for rec in data:
+            yield rec
+
+    elif suffixes.endswith(".json"):
+        with open(p, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        for rec in data:
+            yield rec
+
+    else:
+        raise ValueError(
+            f"Unrecognized candidate file extension for '{path}'. "
+            "Expected .json, .jsonl, or .jsonl.gz"
+        )
+
+
+def load_candidates(path: str) -> list:
+    """Materialize all candidates into a list (fine up to ~100K small records)."""
+    return list(iter_candidates(path))

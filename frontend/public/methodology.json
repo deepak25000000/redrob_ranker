@@ -1,0 +1,94 @@
+{
+  "weights": {
+    "title_fit": 0.14,
+    "must_have_skill_fit": 0.24,
+    "nice_to_have_skill_fit": 0.06,
+    "eval_framework_fit": 0.08,
+    "semantic_career_fit": 0.22,
+    "experience_years_fit": 0.08,
+    "career_trajectory_fit": 0.08,
+    "location_fit": 0.06,
+    "notice_period_fit": 0.04
+  },
+  "must_have_skill_groups": {
+    "embeddings_retrieval": [
+      "BGE",
+      "E5",
+      "Embeddings",
+      "Hugging Face Transformers",
+      "Information Retrieval",
+      "Recommendation Systems",
+      "Sentence Transformers",
+      "Vector Search"
+    ],
+    "vector_db_hybrid_search": [
+      "BM25",
+      "Elasticsearch",
+      "FAISS",
+      "Haystack",
+      "Milvus",
+      "OpenSearch",
+      "Pinecone",
+      "Qdrant",
+      "Weaviate"
+    ],
+    "python": [
+      "Python"
+    ]
+  },
+  "nice_to_have_skill_groups": {
+    "fine_tuning": [
+      "Fine-tuning LLMs",
+      "LoRA",
+      "PEFT",
+      "QLoRA"
+    ],
+    "learning_to_rank": [
+      "Learning to Rank",
+      "LightGBM",
+      "Machine Learning",
+      "XGBoost"
+    ],
+    "mlops": [
+      "BentoML",
+      "Kubeflow",
+      "MLOps",
+      "MLflow",
+      "Weights & Biases"
+    ],
+    "deep_learning_stack": [
+      "Deep Learning",
+      "PyTorch",
+      "TensorFlow",
+      "scikit-learn"
+    ],
+    "llm_tooling": [
+      "LangChain",
+      "Prompt Engineering",
+      "Reinforcement Learning"
+    ],
+    "distributed_systems": [
+      "Kafka",
+      "Kubernetes",
+      "Microservices",
+      "Spark",
+      "gRPC"
+    ]
+  },
+  "jd_facets": {
+    "embeddings_retrieval": "Built and deployed an embeddings-based retrieval system to real users in production. Worked with sentence embeddings, dense vector representations, or transformer-based encoders. Handled embedding drift, index refresh, and retrieval quality regression over time in a live system.",
+    "vector_db_hybrid_search": "Operated a vector database or hybrid search infrastructure in production: combined dense vector retrieval with traditional keyword or BM25 search. Owned the operational side of a search index serving real query traffic.",
+    "ranking_recommendation": "Owned the ranking layer of a search, recommendation, or discovery product. Trained and shipped ranking models, designed features from user behavior and content signals, and iterated on what to optimize for in collaboration with product.",
+    "evaluation_rigor": "Designed an evaluation framework for a ranking or retrieval system: offline metrics like NDCG, MRR, or MAP, correlated against online A/B test outcomes, to know whether a model change actually helped real users.",
+    "shipper_not_just_researcher": "Shipped a working system fast even when the underlying approach was not yet optimal, then iterated based on real user feedback rather than waiting for a perfect solution. Comfortable owning both the modeling and the product tradeoffs.",
+    "ideal_candidate_narrative": "Six to eight years of experience, several years in applied ML or AI roles at a product company rather than a pure services or consulting firm. Has shipped an end-to-end ranking, search, or recommendation system to real users at meaningful scale, and has strong, defensible opinions about retrieval, evaluation, and when to fine-tune versus prompt an LLM."
+  },
+  "disqualifier_rules": [
+    "CONSULTING_ONLY",
+    "VISION_SPEECH_ONLY",
+    "FRAMEWORK_TOURISM",
+    "ARCHITECTURE_ONLY",
+    "TITLE_CHASING",
+    "NO_VISA"
+  ]
+}
