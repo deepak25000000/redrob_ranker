@@ -113,9 +113,10 @@ def _career_text(candidate: Dict[str, Any]) -> str:
     return " \n ".join(parts).lower()
 
 
-def eval_framework_fit(candidate: Dict[str, Any], return_spans: bool = False):
+def eval_framework_fit(candidate: Dict[str, Any], return_spans: bool = False, text: str = None):
     if not return_spans:
-        text = _career_text(candidate)
+        if text is None:
+            text = _career_text(candidate)
         hits = sum(1 for phrase in config.EVAL_FRAMEWORK_PHRASES if phrase in text)
         return min(1.0, hits / 3.0)
         
@@ -140,14 +141,15 @@ def eval_framework_fit(candidate: Dict[str, Any], return_spans: bool = False):
     return score, spans
 
 
-def production_retrieval_phrase_score(candidate: Dict[str, Any], return_spans: bool = False):
+def production_retrieval_phrase_score(candidate: Dict[str, Any], return_spans: bool = False, text: str = None):
     """
     Catches the JD's explicit "plain-language Tier 5" case: a candidate whose
     career history clearly describes building retrieval/ranking/recommendation
     systems even if their skills list doesn't use the fashionable nouns.
     """
     if not return_spans:
-        text = _career_text(candidate)
+        if text is None:
+            text = _career_text(candidate)
         hits = sum(1 for phrase in config.PRODUCTION_RETRIEVAL_PHRASES if phrase in text)
         return min(1.0, hits / 5.0)
 

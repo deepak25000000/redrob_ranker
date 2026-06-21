@@ -72,7 +72,7 @@ def behavioral_modifier(signals: Dict[str, Any]) -> float:
     return float(np.clip(score, config.BEHAVIORAL_MODIFIER_MIN, config.BEHAVIORAL_MODIFIER_MAX))
 
 
-def compute_disqualifiers(candidate: Dict[str, Any]) -> List[str]:
+def compute_disqualifiers(candidate: Dict[str, Any], traj_meta: Dict[str, Any] = None, outside_india: bool = None) -> List[str]:
     """Returns reason codes for every hard disqualifier rule that fired."""
     reasons = []
     career = candidate.get("career_history", [])
@@ -92,11 +92,13 @@ def compute_disqualifiers(candidate: Dict[str, Any]) -> List[str]:
     if features.is_architecture_only(title, career):
         reasons.append("architecture_only_no_recent_code")
 
-    _, traj_meta = features.career_trajectory_fit(career)
+    if traj_meta is None:
+        _, traj_meta = features.career_trajectory_fit(career)
     if traj_meta["short_stints"] >= 3 and len(career) >= 3:
         reasons.append("title_chasing_pattern")
 
-    _, outside_india = features.location_fit(candidate["profile"])
+    if outside_india is None:
+        _, outside_india = features.location_fit(candidate["profile"])
     if outside_india and not signals.get("willing_to_relocate", False):
         reasons.append("no_visa_sponsorship_no_relocation")
 
@@ -162,8 +164,8 @@ def score_all(candidates: List[Dict[str, Any]], semantic_backend=None) -> List[D
         t_score, title_category = features.title_fit_score(candidate)
         mh_score, mh_coverage = features.must_have_skill_fit(candidate["skills"])
         nh_score, nh_coverage = features.nice_to_have_skill_fit(candidate["skills"])
-        eval_score = features.eval_framework_fit(candidate)
-        retrieval_phrase_score = features.production_retrieval_phrase_score(candidate)
+        eval_score = features.eval_framework_fit(candidate, text=candidate_texts[idx])
+        retrieval_phrase_score = features.production_retrieval_phrase_score(candidate, text=candidate_texts[idx])
 
         coherence_factor = features.skill_narrative_coherence_factor(title_category, retrieval_phrase_score)
         peak_group_coverage = max(mh_coverage.values()) if mh_coverage else 0.0
@@ -193,7 +195,7 @@ def score_all(candidates: List[Dict[str, Any]], semantic_backend=None) -> List[D
         )
 
         modifier = behavioral_modifier(signals)
-        disqualifiers = compute_disqualifiers(candidate)
+        disqualifiers = compute_disqualifiers(candidate, traj_meta, outside_india)
         penalty = sum(DISQUALIFIER_PENALTY_MAP[r] for r in disqualifiers)
 
         final_score = fit_score * modifier - penalty

@@ -32,8 +32,8 @@ class TfidfSemanticBackend:
     def __init__(self):
         from sklearn.feature_extraction.text import TfidfVectorizer
         self.vectorizer = TfidfVectorizer(
-            max_features=20000,
-            ngram_range=(1, 2),
+            max_features=10000,
+            ngram_range=(1, 1),
             stop_words="english",
             sublinear_tf=True,
         )
