@@ -39,7 +39,13 @@ export default function RunPage() {
 
     try {
       const formData = new FormData();
-      if (!useSample && file) formData.append('file', file);
+      if (!useSample && file) {
+        if (file.name === 'candidates.jsonl' || file.name === 'candidates.jsonl.gz') {
+          formData.append('local_filename', file.name);
+        } else {
+          formData.append('file', file);
+        }
+      }
 
       const controller = new AbortController();
       const timeoutId = window.setTimeout(() => controller.abort(), 600000);

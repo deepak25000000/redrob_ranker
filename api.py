@@ -102,20 +102,32 @@ def pipeline_snapshot() -> Dict[str, Any]:
 @app.post("/api/rank")
 async def rank(
     top_n: int = Form(config.TOP_N),
-    file: Optional[UploadFile] = File(None)
+    file: Optional[UploadFile] = File(None),
+    local_filename: Optional[str] = Form(None)
 ):
     import pathlib
     import tempfile
     
     t0 = time.time()
     
-    if file is not None:
-        suffix = "".join(pathlib.Path(file.filename).suffixes)
-        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-            tmp.write(await file.read())
-            path = tmp.name
+    if local_filename:
+        local_path = pathlib.Path(local_filename)
+        if local_path.exists() and local_path.is_file():
+            path = str(local_path)
+        else:
+            raise HTTPException(status_code=400, detail=f"Local file '{local_filename}' not found on the server.")
+    elif file is not None:
+        local_path = pathlib.Path(file.filename)
+        if local_path.exists() and local_path.is_file():
+            path = str(local_path)
+        else:
+            suffix = "".join(pathlib.Path(file.filename).suffixes)
+            with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+                tmp.write(await file.read())
+                path = tmp.name
     else:
         path = "sample_data/sample_candidates.json"
+
 
     candidates = list(load_candidates(path))
     app_state["pool"] = candidates
