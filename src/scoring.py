@@ -12,6 +12,8 @@ from*, not independent of, the rank — directly addressing the spec's
 """
 
 import math
+import heapq
+from datetime import date
 from typing import Dict, Any, List
 
 import numpy as np
@@ -29,7 +31,6 @@ def behavioral_modifier(signals: Dict[str, Any]) -> float:
     score = 1.0
 
     # Recency of activity: decay based on days since last_active_date.
-    from datetime import date
     last_active = features.parse_date(signals.get("last_active_date", ""))
     if last_active:
         days_inactive = (date(2026, 6, 19) - last_active).days
@@ -115,7 +116,7 @@ DISQUALIFIER_PENALTY_MAP = {
 }
 
 
-def score_all(candidates: List[Dict[str, Any]], semantic_backend=None) -> List[Dict[str, Any]]:
+def score_all(candidates: List[Dict[str, Any]], semantic_backend=None, top_n: int = config.TOP_N) -> List[Dict[str, Any]]:
     """
     Scores every candidate and returns a list of result dicts, UNSORTED.
     Honeypots are excluded outright (not merely penalized) and reported separately.
@@ -139,24 +140,35 @@ def score_all(candidates: List[Dict[str, Any]], semantic_backend=None) -> List[D
     sims = np.vstack(sims)  # shape: (n_facets, n_candidates)
     semantic_scores = sims.mean(axis=0)
     # Normalize to a 0-1 band using wide percentile bounds (1st/99th, not 5th/95th)
-    # so the scale is set by genuine outliers rather than getting crushed by the
-    # bulk cluster of mediocre-fit candidates that real recruiting pools are mostly
-    # made of. A true standout (e.g. a candidate whose raw similarity is 4-5x the
-    # pool median) should land near 1.0; a candidate barely above median should NOT
-    # land near 1.0 just because most of the pool is irrelevant.
     lo = float(np.percentile(semantic_scores, 1))
     hi = max(float(np.percentile(semantic_scores, 99)), float(np.max(semantic_scores)) * 0.97)
     span = max(1e-6, hi - lo)
     semantic_scores_norm = np.clip((semantic_scores - lo) / span, 0.0, 1.0)
 
-    results = []
+    heap = []
     honeypot_count = 0
+
+    semantic_weight = config.COMPONENT_WEIGHTS.get("semantic_career_fit", 0.22)
+    max_other_components = 1.0 - semantic_weight
+    b_max = config.BEHAVIORAL_MODIFIER_MAX
+
+    # Character complement mapping for candidate ID string to pop larger ID first
+    char_map = {c: chr(255 - ord(c)) for c in "CAND_0123456789"}
+    def get_comp_id(cid: str) -> str:
+        return "".join(char_map.get(c, c) for c in cid)
 
     for idx, candidate in enumerate(candidates):
         flags = honeypot.detect_honeypot_flags(candidate)
         if len(flags) >= 2:
             honeypot_count += 1
             continue  # excluded entirely, not ranked
+
+        # Pruning check
+        if len(heap) >= top_n:
+            threshold = heap[0][0]
+            max_potential = (semantic_weight * semantic_scores_norm[idx] + max_other_components) * b_max
+            if max_potential <= threshold:
+                continue
 
         profile = candidate["profile"]
         signals = candidate["redrob_signals"]
@@ -200,7 +212,7 @@ def score_all(candidates: List[Dict[str, Any]], semantic_backend=None) -> List[D
 
         final_score = fit_score * modifier - penalty
 
-        results.append({
+        res_dict = {
             "candidate_id": candidate["candidate_id"],
             "score": round(float(final_score), 6),
             "fit_score": round(float(fit_score), 4),
@@ -221,8 +233,19 @@ def score_all(candidates: List[Dict[str, Any]], semantic_backend=None) -> List[D
             "location_fit": round(float(loc_score), 3),
             "notice_period_fit": round(float(notice_score), 3),
             "candidate": candidate,  # kept for reasoning generation; stripped before CSV export
-        })
+        }
 
+        # Push/replace in heap
+        comp_id = get_comp_id(candidate["candidate_id"])
+        if len(heap) < top_n:
+            heapq.heappush(heap, (final_score, comp_id, res_dict))
+        else:
+            worst_score, worst_comp_id, _ = heap[0]
+            if final_score > worst_score or (final_score == worst_score and comp_id > worst_comp_id):
+                heapq.heapreplace(heap, (final_score, comp_id, res_dict))
+
+    # Reconstruct results from the heap
+    results = [item[2] for item in heap]
     results.sort(key=lambda r: r["candidate_id"])  # stable pre-sort for deterministic tie-breaks
     results.sort(key=lambda r: r["score"], reverse=True)
 

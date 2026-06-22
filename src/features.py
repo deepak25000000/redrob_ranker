@@ -10,14 +10,35 @@ import math
 import re
 from datetime import date
 from typing import Dict, Any, List, Tuple
+from functools import lru_cache
 
 from . import config
+
+TITLE_SCORE_MAP = {
+    "ml_ai_eng": 1.0,
+    "data_eng": 0.55,
+    "swe_backend": 0.45,
+    "swe_frontend": 0.20,
+    "architecture_only": 0.35,
+    "other_technical": 0.30,
+    "non_technical": 0.05,
+}
+
+PROFICIENCY_WEIGHTS = {
+    "beginner": 0.35,
+    "intermediate": 0.6,
+    "advanced": 0.85,
+    "expert": 1.0,
+}
+
+LOG1P_20 = math.log1p(20)
 
 
 def _norm(s: str) -> str:
     return (s or "").strip().lower()
 
 
+@lru_cache(maxsize=1024)
 def classify_title(title: str) -> str:
     t = _norm(title)
     for category, keywords in config.TITLE_CATEGORY_KEYWORDS.items():
@@ -32,16 +53,7 @@ def title_fit_score(candidate: Dict[str, Any]) -> Tuple[float, str]:
     """How well does the *current* title match what this JD is actually for."""
     title = candidate["profile"]["current_title"]
     category = classify_title(title)
-    score_map = {
-        "ml_ai_eng": 1.0,
-        "data_eng": 0.55,
-        "swe_backend": 0.45,
-        "swe_frontend": 0.20,
-        "architecture_only": 0.35,
-        "other_technical": 0.30,
-        "non_technical": 0.05,
-    }
-    return score_map.get(category, 0.25), category
+    return TITLE_SCORE_MAP.get(category, 0.25), category
 
 
 def _skill_trust_weight(skill: Dict[str, Any]) -> float:
@@ -50,13 +62,13 @@ def _skill_trust_weight(skill: Dict[str, Any]) -> float:
     a skill with high proficiency, long duration, and real endorsements counts far
     more than the same skill name with 0 endorsements and a couple months of use.
     """
-    prof_weight = {"beginner": 0.35, "intermediate": 0.6, "advanced": 0.85, "expert": 1.0}.get(
+    prof_weight = PROFICIENCY_WEIGHTS.get(
         skill.get("proficiency", "beginner"), 0.35
     )
     duration = skill.get("duration_months", 0) or 0
     duration_factor = min(1.0, duration / 24.0)  # saturates at 2 years
     endorsements = skill.get("endorsements", 0) or 0
-    endorsement_factor = min(1.0, math.log1p(endorsements) / math.log1p(20))
+    endorsement_factor = min(1.0, math.log1p(endorsements) / LOG1P_20)
     # A skill needs *some* duration or endorsement evidence to be trusted; a skill
     # with both at zero is treated as a bare keyword, not a real capability.
     evidence_factor = max(duration_factor, endorsement_factor)
@@ -216,6 +228,27 @@ def is_consulting_only_career(career_history: List[Dict[str, Any]]) -> bool:
     return all(any(firm in c for firm in config.CONSULTING_FIRMS) for c in companies)
 
 
+# Pre-computed union of skill groups checked in is_framework_tourist() — avoids
+# rebuilding the set on every call (100K calls = 100K redundant set unions).
+_DEEPER_AI_SKILLS = (
+    config.MUST_HAVE_SKILL_GROUPS["embeddings_retrieval"]
+    | config.MUST_HAVE_SKILL_GROUPS["vector_db_hybrid_search"]
+    | config.NICE_TO_HAVE_SKILL_GROUPS["fine_tuning"]
+    | config.NICE_TO_HAVE_SKILL_GROUPS["deep_learning_stack"]
+)
+
+_VISION_SPEECH_SKILLS = {
+    "Image Classification", "Object Detection", "OpenCV", "YOLO", "CNN",
+    "GANs", "Speech Recognition", "TTS",
+}
+
+_NLP_IR_SKILLS = (
+    config.MUST_HAVE_SKILL_GROUPS["embeddings_retrieval"]
+    | config.MUST_HAVE_SKILL_GROUPS["vector_db_hybrid_search"]
+    | {"NLP"}
+)
+
+
 def is_framework_tourist(candidate: Dict[str, Any]) -> bool:
     """Only AI exposure is recent (<12mo) LangChain/Prompt Engineering, nothing deeper."""
     skills = candidate.get("skills", [])
@@ -224,10 +257,7 @@ def is_framework_tourist(candidate: Dict[str, Any]) -> bool:
     deeper_ai_present = False
     for s in skills:
         name = s.get("name", "")
-        if name in config.MUST_HAVE_SKILL_GROUPS["embeddings_retrieval"] | \
-           config.MUST_HAVE_SKILL_GROUPS["vector_db_hybrid_search"] | \
-           config.NICE_TO_HAVE_SKILL_GROUPS["fine_tuning"] | \
-           config.NICE_TO_HAVE_SKILL_GROUPS["deep_learning_stack"]:
+        if name in _DEEPER_AI_SKILLS:
             if (s.get("duration_months", 0) or 0) >= 12:
                 deeper_ai_present = True
         if name in ai_relevant and (s.get("duration_months", 0) or 0) < 12:
@@ -236,17 +266,11 @@ def is_framework_tourist(candidate: Dict[str, Any]) -> bool:
 
 
 def is_vision_speech_robotics_only(skills: List[Dict[str, Any]]) -> bool:
-    vision_speech = {
-        "Image Classification", "Object Detection", "OpenCV", "YOLO", "CNN",
-        "GANs", "Speech Recognition", "TTS",
-    }
-    nlp_ir = config.MUST_HAVE_SKILL_GROUPS["embeddings_retrieval"] | \
-        config.MUST_HAVE_SKILL_GROUPS["vector_db_hybrid_search"] | {"NLP"}
     names = {s.get("name", "") for s in skills}
-    has_vision_speech = bool(names & vision_speech)
-    has_nlp_ir = bool(names & nlp_ir)
+    has_vision_speech = bool(names & _VISION_SPEECH_SKILLS)
+    has_nlp_ir = bool(names & _NLP_IR_SKILLS)
     # Only a disqualifier if vision/speech is their *whole* AI surface area.
-    return has_vision_speech and not has_nlp_ir and len(names & vision_speech) >= 3
+    return has_vision_speech and not has_nlp_ir and len(names & _VISION_SPEECH_SKILLS) >= 3
 
 
 def skill_narrative_coherence_factor(title_category: str, retrieval_phrase_score: float) -> float:

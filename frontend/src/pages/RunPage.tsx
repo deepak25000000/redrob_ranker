@@ -18,6 +18,7 @@ export default function RunPage() {
   const [stageIndex, setStageIndex] = useState<number>(-1);
   const [pipeline, setPipeline] = useState<PipelineSnapshot | null>(null);
   const [file, setFile] = useState<File | null>(null);
+  const [localPath, setLocalPath] = useState<string>('candidates.jsonl');
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -30,7 +31,7 @@ export default function RunPage() {
     if (e.dataTransfer.files?.[0]) setFile(e.dataTransfer.files[0]);
   };
 
-  const handleRun = async (useSample: boolean = false) => {
+  const handleRun = async (useSample: boolean = false, runLocalFile: boolean = false) => {
     setLoading(true);
     setError(null);
     setStageIndex(0);
@@ -39,20 +40,22 @@ export default function RunPage() {
 
     try {
       const formData = new FormData();
-      if (!useSample && file) {
+      if (runLocalFile && localPath) {
+        formData.append('local_filename', localPath);
+      } else if (!useSample && file) {
         formData.append('file', file);
       }
 
       const controller = new AbortController();
-      const timeoutId = window.setTimeout(() => controller.abort(), 600000);
+      const timeoutId = window.setTimeout(() => controller.abort(), 1800000); // 30 minutes to allow slow uploads
 
       const res = await fetch(apiUrl('/api/rank'), {
         method: 'POST',
         body: formData,
         signal: controller.signal
       }).catch(err => {
-        if (err.name === 'AbortError') throw new Error('Request timed out after 10 minutes.');
-        throw new Error("Couldn't reach the ranking server. Is `npm run dev` running?");
+        if (err.name === 'AbortError') throw new Error('Request timed out. For very large uploads, consider running the app locally and specifying a server-side local path.');
+        throw new Error("Couldn't reach the ranking server. Is the backend server running?");
       });
 
       window.clearTimeout(timeoutId);
@@ -163,6 +166,29 @@ export default function RunPage() {
             </div>
           </div>
         )}
+
+        <div className="mt-8 pt-8 border-t border-rule/30">
+          <label className="block text-sm font-mono text-ink/60 mb-2">
+            Or: Run a file already located on the backend server's disk (recommended for large files):
+          </label>
+          <div className="flex gap-4 max-w-lg">
+            <input
+              type="text"
+              value={localPath}
+              onChange={(e) => setLocalPath(e.target.value)}
+              placeholder="e.g. candidates.jsonl"
+              className="flex-1 px-4 py-2 border border-rule bg-paper font-mono text-sm focus:outline-none focus:ring-2 focus:ring-evidence"
+            />
+            <button
+              onClick={() => handleRun(false, true)}
+              disabled={loading || !localPath.trim()}
+              className="px-6 py-2 bg-ink text-paper text-sm font-medium hover:bg-ink/90 transition-colors focus:outline-none focus:ring-2 focus:ring-evidence"
+            >
+              Run server file
+            </button>
+          </div>
+        </div>
+
         <input
           type="file"
           ref={fileInputRef}

@@ -33,6 +33,7 @@ class TfidfSemanticBackend:
         from sklearn.feature_extraction.text import TfidfVectorizer
         self.vectorizer = TfidfVectorizer(
             max_features=10000,
+            min_df=2,
             ngram_range=(1, 1),
             stop_words="english",
             sublinear_tf=True,
@@ -42,6 +43,11 @@ class TfidfSemanticBackend:
     def fit(self, corpus: List[str]) -> None:
         self.vectorizer.fit(corpus)
         self._fitted = True
+
+    def fit_transform(self, texts: List[str]):
+        res = self.vectorizer.fit_transform(texts)
+        self._fitted = True
+        return res
 
     def transform(self, texts: List[str]):
         if not self._fitted:
@@ -68,6 +74,9 @@ class SentenceTransformerBackend:
 
     def fit(self, corpus: List[str]) -> None:
         pass  # nothing to fit — pretrained model
+
+    def fit_transform(self, texts: List[str]):
+        return self.transform(texts)
 
     def transform(self, texts: List[str]) -> np.ndarray:
         return self.model.encode(texts, batch_size=64, show_progress_bar=False, normalize_embeddings=True)
