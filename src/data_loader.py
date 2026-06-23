@@ -7,9 +7,18 @@ be held as a giant pretty-printed structure in memory at once.
 """
 
 import gzip
-import json
+import io
+try:
+    import orjson
+    _loads = orjson.loads
+except ImportError:
+    import json
+    _loads = json.loads
+import json as _json_stdlib  # kept for CSV/Excel cell parsing and json.load()
 from pathlib import Path
 from typing import Iterator, Dict, Any
+
+_READ_BUFFER_SIZE = 1 << 20  # 1 MiB — reduces syscall overhead on large JSONL files
 
 
 def iter_candidates(path: str) -> Iterator[Dict[str, Any]]:
@@ -22,24 +31,25 @@ def iter_candidates(path: str) -> Iterator[Dict[str, Any]]:
             for line in f:
                 line = line.strip()
                 if line:
-                    yield json.loads(line)
+                    yield _loads(line)
 
     elif suffixes.endswith(".jsonl"):
-        with open(p, "r", encoding="utf-8") as f:
+        with open(p, "rb", buffering=_READ_BUFFER_SIZE) as raw:
+            f = io.TextIOWrapper(raw, encoding="utf-8")
             for line in f:
                 line = line.strip()
                 if line:
-                    yield json.loads(line)
+                    yield _loads(line)
 
     elif suffixes.endswith(".json.gz"):
         with gzip.open(p, "rt", encoding="utf-8") as f:
-            data = json.load(f)
+            data = _json_stdlib.load(f)
         for rec in data:
             yield rec
 
     elif suffixes.endswith(".json"):
         with open(p, "r", encoding="utf-8") as f:
-            data = json.load(f)
+            data = _json_stdlib.load(f)
         for rec in data:
             yield rec
 
@@ -51,8 +61,8 @@ def iter_candidates(path: str) -> Iterator[Dict[str, Any]]:
             for k, v in d.items():
                 if isinstance(v, str) and (v.startswith('[') or v.startswith('{')):
                     try:
-                        d[k] = json.loads(v)
-                    except json.JSONDecodeError:
+                        d[k] = _json_stdlib.loads(v)
+                    except (ValueError, _json_stdlib.JSONDecodeError):
                         pass
             yield d
 
@@ -64,8 +74,8 @@ def iter_candidates(path: str) -> Iterator[Dict[str, Any]]:
             for k, v in d.items():
                 if isinstance(v, str) and (v.startswith('[') or v.startswith('{')):
                     try:
-                        d[k] = json.loads(v)
-                    except json.JSONDecodeError:
+                        d[k] = _json_stdlib.loads(v)
+                    except (ValueError, _json_stdlib.JSONDecodeError):
                         pass
             yield d
 

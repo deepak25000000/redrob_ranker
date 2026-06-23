@@ -14,12 +14,26 @@ from*, not independent of, the rank — directly addressing the spec's
 import math
 import heapq
 from datetime import date
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Tuple
 
 import numpy as np
 
 from . import config, features, honeypot
 from .jd_requirements import JD_FACET_NAMES, JD_FACET_TEXTS
+
+# Pre-computed set of all must-have skills for fast pre-filtering
+_MUST_HAVE_SKILLS = set()
+for _group in config.MUST_HAVE_SKILL_GROUPS.values():
+    _MUST_HAVE_SKILLS.update(_group)
+
+
+def _has_must_have_skill(candidate: Dict[str, Any]) -> bool:
+    """Fast check if candidate has at least one must-have skill."""
+    skills = candidate.get("skills", [])
+    for s in skills:
+        if s.get("name", "") in _MUST_HAVE_SKILLS:
+            return True
+    return False
 
 
 def behavioral_modifier(signals: Dict[str, Any]) -> float:
@@ -128,9 +142,11 @@ def score_all(candidates: List[Dict[str, Any]], semantic_backend=None, top_n: in
         from .semantic import get_backend
         semantic_backend = get_backend("auto")
 
-    semantic_backend.fit(candidate_texts + JD_FACET_TEXTS)
-    candidate_matrix = semantic_backend.transform(candidate_texts)
-    jd_matrix = semantic_backend.transform(JD_FACET_TEXTS)
+    all_texts = candidate_texts + JD_FACET_TEXTS
+    all_matrix = semantic_backend.fit_transform(all_texts)
+    n_candidates = len(candidate_texts)
+    candidate_matrix = all_matrix[:n_candidates]
+    jd_matrix = all_matrix[n_candidates:]
 
     # Mean similarity of each candidate against all JD facets = semantic_career_fit.
     sims = []

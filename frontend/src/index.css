@@ -5,9 +5,14 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
     @apply bg-paper text-ink font-body antialiased;
   }
+
   h1, h2, h3 {
     @apply font-display font-medium;
   }
@@ -15,6 +20,60 @@
   :focus-visible {
     outline: 2px solid theme('colors.evidence');
     outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  ::selection {
+    background: rgba(217, 142, 43, 0.25);
+    color: #16202B;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: theme('colors.rule');
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #a8a49a;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, theme('colors.evidence'), #e8a84c);
+  }
+
+  .glass {
+    background: rgba(247, 246, 242, 0.72);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+
+  .glass-dark {
+    background: rgba(22, 32, 43, 0.82);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+
+  .skeleton {
+    @apply bg-rule/30 animate-shimmer rounded;
+    background: linear-gradient(90deg, theme('colors.rule/20') 25%, theme('colors.rule/40') 50%, theme('colors.rule/20') 75%);
+    background-size: 200% 100%;
+  }
+
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: theme('colors.rule') transparent;
   }
 }
 
@@ -28,6 +87,7 @@
     min-height: calc(100vh - 73px);
     background:
       radial-gradient(circle at 12% 12%, rgba(217, 142, 43, 0.18), transparent 24rem),
+      radial-gradient(circle at 80% 80%, rgba(63, 125, 88, 0.08), transparent 20rem),
       linear-gradient(135deg, #111820 0%, #16202b 52%, #27313a 100%);
     color: #f7f6f2;
   }
@@ -38,7 +98,7 @@
 
   .home-hero__copy h1 {
     @apply text-5xl md:text-6xl lg:text-7xl leading-[0.98] my-5;
-    letter-spacing: 0;
+    letter-spacing: -0.02em;
   }
 
   .home-hero__copy p {
@@ -51,15 +111,24 @@
 
   .primary-action,
   .secondary-action {
-    @apply inline-flex items-center justify-center px-5 py-3 text-sm font-bold transition-colors;
+    @apply inline-flex items-center justify-center px-5 py-3 text-sm font-bold transition-all;
   }
 
   .primary-action {
-    @apply bg-evidence text-ink hover:bg-card disabled:cursor-wait disabled:opacity-70;
+    @apply bg-evidence text-ink hover:bg-card hover:text-ink disabled:cursor-wait disabled:opacity-70;
+  }
+
+  .primary-action:hover:not(:disabled) {
+    box-shadow: 0 4px 20px rgba(217, 142, 43, 0.35);
+    transform: translateY(-1px);
   }
 
   .secondary-action {
     @apply border border-card/25 text-card hover:bg-card/10;
+  }
+
+  .secondary-action:hover {
+    transform: translateY(-1px);
   }
 
   .demo-error {
@@ -67,7 +136,7 @@
   }
 
   .demo-complete {
-    @apply mt-5 inline-flex w-fit font-mono text-xs font-bold text-evidence underline decoration-evidence/50 hover:text-card;
+    @apply mt-5 inline-flex w-fit font-mono text-xs font-bold text-evidence underline decoration-evidence/50 hover:text-card transition-colors;
   }
 
   .pipeline-board {
@@ -117,7 +186,7 @@
   }
 
   .pipeline-node {
-    @apply w-full min-h-[124px] flex flex-col items-start justify-between gap-4 border border-card/15 bg-card/10 p-4 text-left text-card transition-colors;
+    @apply w-full min-h-[124px] flex flex-col items-start justify-between gap-4 border border-card/15 bg-card/10 p-4 text-left text-card transition-all;
     border-radius: 8px;
   }
 
@@ -125,11 +194,16 @@
   .pipeline-node--active {
     @apply border-evidence bg-evidence/15;
     box-shadow: 0 0 24px rgba(217, 142, 43, 0.22);
+    transform: translateY(-2px);
   }
 
   .pipeline-node__icon {
-    @apply grid h-9 w-9 place-items-center border border-card/20 bg-ink/50 text-evidence;
+    @apply grid h-9 w-9 place-items-center border border-card/20 bg-ink/50 text-evidence transition-transform;
     border-radius: 50%;
+  }
+
+  .pipeline-node--active .pipeline-node__icon {
+    transform: scale(1.1);
   }
 
   .pipeline-node__label {
@@ -141,11 +215,11 @@
   }
 
   .pipeline-arrow {
-    @apply hidden md:block text-evidence/60 rotate-90 xl:rotate-0;
+    @apply hidden md:block text-evidence/60 rotate-90 xl:rotate-0 transition-transform;
   }
 
   .pipeline-board__drawer {
-    @apply mt-6 grid gap-4 border border-card/15 bg-ink/70 p-5 md:grid-cols-[1fr_auto];
+    @apply mt-6 grid gap-4 border border-card/15 bg-ink/70 p-5 md:grid-cols-[1fr_auto] transition-all;
     border-radius: 8px;
   }
 
@@ -164,7 +238,7 @@
   }
 
   .pipeline-board__evidence-link {
-    @apply text-evidence hover:text-card hover:border-evidence;
+    @apply text-evidence hover:text-card hover:border-evidence transition-colors;
   }
 
   .pipeline-board__noscript {
@@ -192,7 +266,12 @@
   }
 
   .work-grid article {
-    @apply bg-card p-7 md:p-8;
+    @apply bg-card p-7 md:p-8 transition-all;
+  }
+
+  .work-grid article:hover {
+    @apply bg-paper;
+    transform: translateY(-2px);
   }
 
   .work-grid span {
@@ -212,7 +291,11 @@
   }
 
   .comparison-card {
-    @apply bg-card px-5 md:px-10 py-10;
+    @apply bg-card px-5 md:px-10 py-10 transition-all;
+  }
+
+  .comparison-card:hover {
+    @apply bg-paper;
   }
 
   .comparison-card__dot {
@@ -238,6 +321,62 @@
   .comparison-card p {
     @apply max-w-xl leading-relaxed text-ink/75;
   }
+
+  .btn-ink {
+    @apply px-6 py-2 bg-ink text-paper font-medium hover:bg-ink/90 transition-all shadow-sm;
+  }
+
+  .btn-ink:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(22, 32, 43, 0.2);
+  }
+
+  .btn-outline {
+    @apply px-4 py-2 border border-rule text-sm font-medium hover:bg-card transition-all;
+  }
+
+  .btn-outline:hover {
+    transform: translateY(-1px);
+  }
+
+  .card-hover {
+    @apply transition-all;
+  }
+
+  .card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(22, 32, 43, 0.08);
+  }
+
+  .input-field {
+    @apply px-4 py-2 border border-rule bg-paper font-mono text-sm focus:outline-none focus:ring-2 focus:ring-evidence focus:border-evidence transition-all;
+  }
+
+  .tag {
+    @apply inline-flex items-center px-2.5 py-0.5 text-[10px] font-mono font-bold uppercase tracking-wider rounded-full;
+  }
+
+  .tag-evidence {
+    @apply tag bg-evidence/15 text-evidence border border-evidence/25;
+  }
+
+  .tag-trust {
+    @apply tag bg-trust/15 text-trust border border-trust/25;
+  }
+
+  .tag-caution {
+    @apply tag bg-caution/15 text-caution border border-caution/25;
+  }
+}
+
+@keyframes progress-bar {
+  0% { width: 0%; }
+  50% { width: 70%; }
+  100% { width: 100%; }
+}
+
+.animate-progress {
+  animation: progress-bar 2s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {

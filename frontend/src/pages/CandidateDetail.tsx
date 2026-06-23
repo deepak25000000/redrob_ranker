@@ -1,46 +1,110 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { ArrowLeft, BarChart3, FileText, User, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { apiUrl } from '../lib/api';
+
+interface CareerRole {
+  title: string;
+  company: string;
+  duration_months: number;
+  description: string;
+}
+
+interface EvidenceSpan {
+  start: number;
+  end: number;
+  career_history_index: number;
+  contributes_to: string;
+  delta_estimate: number;
+}
+
+interface CandidateProfile {
+  anonymized_name?: string;
+  name?: string;
+  current_title?: string;
+  location?: string;
+}
+
+interface CandidateData {
+  candidate: {
+    profile?: CandidateProfile;
+    career_history?: CareerRole[];
+  };
+  evidence_spans?: EvidenceSpan[];
+  score?: number;
+  fit_score?: number;
+  behavioral_modifier?: number;
+  penalty?: number;
+  title_fit: number;
+  must_have_skill_fit: number;
+  eval_framework_fit: number;
+  semantic_career_fit: number;
+  experience_years_fit: number;
+  career_trajectory_fit: number;
+  location_fit: number;
+  disqualifiers?: string[];
+}
+
+type Tab = 'evidence' | 'scores' | 'profile';
 
 export default function CandidateDetail() {
   const { id } = useParams<{ id: string }>();
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<CandidateData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<Tab>('evidence');
 
   useEffect(() => {
     fetch(apiUrl(`/api/candidate/${id}`))
       .then(res => res.json())
-      .then(d => {
-        setData(d);
-        setLoading(false);
-      })
+      .then(d => { setData(d); setLoading(false); })
       .catch(console.error);
   }, [id]);
+
+  const scoreChartData = useMemo(() => {
+    if (!data) return [];
+    const items = [
+      { name: 'Title', value: data.title_fit * 0.14, raw: data.title_fit, weight: 0.14 },
+      { name: 'Must-have skills', value: data.must_have_skill_fit * 0.24, raw: data.must_have_skill_fit, weight: 0.24 },
+      { name: 'Eval framework', value: data.eval_framework_fit * 0.08, raw: data.eval_framework_fit, weight: 0.08 },
+      { name: 'Semantic fit', value: data.semantic_career_fit * 0.22, raw: data.semantic_career_fit, weight: 0.22 },
+      { name: 'Exp years', value: data.experience_years_fit * 0.08, raw: data.experience_years_fit, weight: 0.08 },
+      { name: 'Trajectory', value: data.career_trajectory_fit * 0.08, raw: data.career_trajectory_fit, weight: 0.08 },
+      { name: 'Location', value: data.location_fit * 0.06, raw: data.location_fit, weight: 0.06 },
+    ].filter(i => i.value > 0);
+    return items;
+  }, [data]);
 
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center p-12">
-        <div className="font-mono text-sm text-ink/50 animate-pulse">Retrieving case file...</div>
+        <div className="flex flex-col items-center gap-4">
+          <div className="skeleton h-6 w-48" />
+          <div className="skeleton h-4 w-64" />
+        </div>
       </div>
     );
   }
-  
+
   if (!data) {
     return (
-      <div className="p-12 text-center text-caution">
-        <div className="font-display text-2xl mb-2">Record Not Found</div>
+      <div className="flex-1 flex flex-col items-center justify-center p-12 gap-4 animate-fade-in">
+        <AlertTriangle size={32} className="text-caution" />
+        <div className="font-display text-2xl">Record Not Found</div>
         <p className="text-ink/70">Candidate {id} is not in the current active ranking session.</p>
+        <Link to="/results" className="btn-ink text-sm mt-4">Return to Ledger</Link>
       </div>
     );
   }
 
   const cand = data.candidate;
   const spans = data.evidence_spans || [];
-  const renderHighlightedText = (text: string, roleSpans: any[]) => {
+
+  const renderHighlightedText = (text: string, roleSpans: EvidenceSpan[]) => {
     const cleanSpans = roleSpans
       .filter((span) => Number.isInteger(span.start) && Number.isInteger(span.end) && span.end > span.start)
       .sort((a, b) => a.start - b.start)
-      .reduce((acc: any[], span) => {
+      .reduce<EvidenceSpan[]>((acc, span) => {
         const previous = acc[acc.length - 1];
         if (!previous || span.start >= previous.end) acc.push(span);
         return acc;
@@ -57,7 +121,7 @@ export default function CandidateDetail() {
       parts.push(
         <mark
           key={`mark-${index}`}
-          className="bg-evidence/30 text-ink px-1 border-b-2 border-evidence"
+          className="bg-evidence/30 text-ink px-1 border-b-2 border-evidence rounded-sm transition-all hover:bg-evidence/40"
           title={`${span.contributes_to}: +${span.delta_estimate}`}
         >
           {text.slice(span.start, span.end)}
@@ -69,147 +133,188 @@ export default function CandidateDetail() {
     return parts;
   };
 
+  const tabs: { key: Tab; label: string; icon: typeof FileText }[] = [
+    { key: 'evidence', label: 'Evidence', icon: FileText },
+    { key: 'scores', label: 'Score Breakdown', icon: BarChart3 },
+    { key: 'profile', label: 'Profile', icon: User },
+  ];
+
   return (
-    <div className="flex-1 flex flex-col md:flex-row overflow-hidden h-full max-h-[calc(100vh-73px)] border-t border-rule">
-      {/* Pane 1: Profile Summary */}
-      <div className="w-full md:w-[28%] border-r border-rule bg-paper p-8 overflow-y-auto hidden md:block">
-        <Link to="/results" className="text-xs font-mono font-medium text-ink/50 hover:text-ink mb-8 flex items-center gap-2 transition-colors focus:outline-none focus:underline">
-          <span>←</span> RETURN TO LEDGER
-        </Link>
-        <div className="font-mono text-xs mb-3 text-ink/50 tracking-wider">CANDIDATE PROFILE</div>
-        <h2 className="font-display text-3xl mb-2 leading-tight">{cand.profile?.anonymized_name || cand.profile?.name || "Redacted"}</h2>
-        <p className="text-base font-medium text-ink/90 mb-6">{cand.profile?.current_title}</p>
-        
-        <div className="grid grid-cols-2 gap-4 mb-10 pb-8 border-b border-rule/50">
+    <div className="flex-1 flex flex-col overflow-hidden animate-fade-in">
+      <div className="border-b border-rule bg-card/95 glass px-5 md:px-8 py-4 flex items-center justify-between sticky top-0 z-20">
+        <div className="flex items-center gap-4">
+          <Link to="/results" className="text-ink/50 hover:text-ink transition-colors">
+            <ArrowLeft size={20} />
+          </Link>
           <div>
-            <div className="text-[10px] uppercase font-bold text-ink/40 tracking-wider mb-1">Location</div>
-            <div className="text-sm">{cand.profile?.location || "Unknown"}</div>
-          </div>
-          <div>
-            <div className="text-[10px] uppercase font-bold text-ink/40 tracking-wider mb-1">Candidate ID</div>
-            <div className="text-sm font-mono">{id}</div>
+            <div className="font-mono text-xs text-ink/50">{id}</div>
+            <h2 className="font-display text-lg font-semibold">{cand.profile?.anonymized_name || cand.profile?.name || 'Redacted'}</h2>
           </div>
         </div>
+        <div className="flex items-center gap-2">
+          {data.disqualifiers && data.disqualifiers.length > 0 ? (
+            <span className="tag-caution flex items-center gap-1"><AlertTriangle size={10} /> {data.disqualifiers.length} flags</span>
+          ) : (
+            <span className="tag-trust flex items-center gap-1"><ShieldCheck size={10} /> Clean</span>
+          )}
+          <span className="text-2xl font-mono font-bold text-trust">{data.score?.toFixed(3)}</span>
+        </div>
+      </div>
 
-        <div className="mb-4 text-[10px] uppercase font-bold text-ink/40 tracking-wider">Diagnostic Flags</div>
-        {data.disqualifiers?.length > 0 ? (
-          <div className="space-y-3">
-            {data.disqualifiers.map((d: string, i: number) => (
-              <div key={i} className="p-3 bg-caution/10 border-l-4 border-caution text-caution text-xs leading-relaxed">
-                <span className="font-bold block mb-1">Flag: {d}</span>
-                JD flags this as a critical fit risk based on established disqualifier rules.
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="p-3 bg-trust/10 border-l-4 border-trust text-trust text-xs font-medium">
-            No disqualifying patterns detected.
+      <div className="border-b border-rule bg-paper px-5 md:px-8 flex gap-0">
+        {tabs.map(t => {
+          const active = tab === t.key;
+          const Icon = t.icon;
+          return (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`flex items-center gap-2 px-4 md:px-6 py-3 text-sm font-medium border-b-2 transition-all ${active ? 'border-evidence text-evidence' : 'border-transparent text-ink/60 hover:text-ink hover:border-rule'}`}
+            >
+              <Icon size={16} />
+              <span className="hidden sm:inline">{t.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="flex-1 overflow-y-auto scrollbar-thin">
+        {tab === 'evidence' && (
+          <div className="max-w-3xl mx-auto p-5 md:p-8">
+            {cand.career_history?.map((role: CareerRole, idx: number) => {
+              const roleSpans = spans.filter((s: EvidenceSpan) => s.career_history_index === idx);
+              return (
+                <div key={idx} className="mb-10 animate-slide-up" style={{ animationDelay: `${idx * 100}ms` }}>
+                  <div className="flex items-baseline gap-3 mb-1">
+                    <h4 className="font-bold text-lg">{role.title}</h4>
+                    <span className="text-sm text-ink/60">— {role.company}</span>
+                  </div>
+                  <div className="font-mono text-xs text-ink/50 mb-3">{role.duration_months} MONTHS</div>
+                  <div className="text-base leading-relaxed whitespace-pre-wrap text-ink/90 relative pl-4 border-l-2 border-rule/40">
+                    {roleSpans.length > 0 ? (
+                      <>
+                        <div className="mb-3">
+                          <span className="text-[10px] font-mono bg-evidence/20 text-evidence px-2 py-0.5 border border-evidence/30 rounded-sm">EVIDENCE DETECTED</span>
+                        </div>
+                        {renderHighlightedText(role.description || '', roleSpans)}
+                      </>
+                    ) : (
+                      <div className="opacity-80">{role.description}</div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
-      </div>
 
-      {/* Pane 2: Annotated Evidence View */}
-      <div id="evidence" className="flex-1 bg-card p-10 overflow-y-auto relative scroll-mt-24">
-        <div className="max-w-2xl mx-auto">
-          <div className="sticky top-0 bg-card/95 backdrop-blur py-4 mb-8 border-b-2 border-rule z-10 flex justify-between items-end">
+        {tab === 'scores' && (
+          <div className="max-w-3xl mx-auto p-5 md:p-8 space-y-8 animate-fade-in">
             <div>
-              <h3 className="font-display text-2xl mb-1">Annotated Evidence View</h3>
-              <p className="text-sm text-ink/60">
-                Career history text with inline highlights dictating the fit score.
-              </p>
-            </div>
-          </div>
-
-          {cand.career_history?.map((role: any, idx: number) => {
-            const roleSpans = spans.filter((s: any) => s.career_history_index === idx);
-            
-            return (
-              <div key={idx} className="mb-12">
-                <div className="flex items-baseline gap-4 mb-2">
-                  <h4 className="font-bold text-lg">{role.title}</h4>
-                  <span className="text-sm text-ink/60">— {role.company}</span>
+              <h3 className="font-display text-xl mb-2">Weighted Score Components</h3>
+              <p className="text-sm text-ink/60 mb-6">Each component contributes raw_fit × weight to the final score.</p>
+              {scoreChartData.length > 0 && (
+                <div className="bg-card border border-rule p-4 md:p-6 rounded-sm">
+                  <ResponsiveContainer width="100%" height={280}>
+                    <BarChart data={scoreChartData} margin={{ top: 8, left: -16, right: 8, bottom: 0 }}>
+                      <XAxis dataKey="name" tick={{ fontSize: 10, fontFamily: 'IBM Plex Mono' }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fontSize: 10, fontFamily: 'IBM Plex Mono' }} axisLine={false} tickLine={false} />
+                      <Tooltip
+                        contentStyle={{ background: '#16202B', border: '1px solid rgba(247,246,242,0.15)', borderRadius: 4, fontSize: 12, fontFamily: 'IBM Plex Mono' }}
+                        labelStyle={{ color: '#D98E2B' }}
+                        formatter={(value: unknown) => typeof value === 'number' ? value.toFixed(3) : value as React.ReactNode}
+                      />
+                      <Bar dataKey="value" fill="#D98E2B" radius={[2, 2, 0, 0]} maxBarSize={40} />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
-                <div className="font-mono text-xs text-ink/50 mb-4">{role.duration_months} MONTHS</div>
-                
-                <div className="text-base leading-relaxed whitespace-pre-wrap text-ink/90 relative">
-                  {roleSpans.length > 0 ? (
-                    <>
-                      <div className="absolute -left-6 top-0 bottom-0 w-1 bg-evidence/30"></div>
-                      <span className="inline-block mb-4 text-xs font-mono bg-evidence/20 text-ink/80 px-2 py-1 border border-evidence/30 rounded-sm">
-                        EVIDENCE DETECTED
-                      </span>
-                      <br/>
-                      {renderHighlightedText(role.description || '', roleSpans)}
-                    </>
-                  ) : (
-                    <div className="opacity-80">
-                      {role.description}
-                    </div>
-                  )}
+              )}
+            </div>
+
+            <div className="bg-ink text-paper p-6 md:p-8 rounded-sm">
+              <h3 className="font-display text-lg mb-6 text-card border-b border-rule/30 pb-3 flex items-center justify-between">
+                <span>Score Ledger</span>
+                <span className="font-mono text-xs font-normal opacity-50">COMPUTED</span>
+              </h3>
+              <div className="font-mono text-[11px] space-y-3 mb-6 opacity-80 leading-relaxed">
+                {[
+                  { label: 'Title fit', raw: data.title_fit, weight: 0.14 },
+                  { label: 'Must-have skills', raw: data.must_have_skill_fit, weight: 0.24 },
+                  { label: 'Eval-framework', raw: data.eval_framework_fit, weight: 0.08 },
+                  { label: 'Semantic fit', raw: data.semantic_career_fit, weight: 0.22, highlight: true },
+                  { label: 'Exp years fit', raw: data.experience_years_fit, weight: 0.08 },
+                  { label: 'Trajectory', raw: data.career_trajectory_fit, weight: 0.08 },
+                  { label: 'Location', raw: data.location_fit, weight: 0.06 },
+                ].map((item, i) => (
+                  <div key={i} className={`flex justify-between items-end ${item.highlight ? 'text-evidence font-bold' : ''}`}>
+                    <span className="border-b border-paper/20 border-dotted flex-1 mr-4 pb-0.5">{item.label}</span>
+                    <span>{item.raw?.toFixed(2)} × {item.weight} = {(item.raw * item.weight).toFixed(3)}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="font-mono text-[11px] border-t border-rule/30 pt-3 space-y-2 mb-4">
+                <div className="flex justify-between text-paper/90">
+                  <span>FIT SUBTOTAL</span>
+                  <span>{data.fit_score?.toFixed(3)}</span>
+                </div>
+                <div className="flex justify-between text-paper/70">
+                  <span>× BEHAVIOR MODIFIER</span>
+                  <span>{data.behavioral_modifier?.toFixed(3)}</span>
+                </div>
+                <div className="flex justify-between text-caution font-bold">
+                  <span>− DISQUALIFIER PENALTY</span>
+                  <span>{data.penalty?.toFixed(3)}</span>
                 </div>
               </div>
-            );
-          })}
-        </div>
-      </div>
+              <div className="flex justify-between items-baseline font-mono border-t border-rule/50 pt-4 mt-2">
+                <span className="text-sm text-trust font-bold tracking-widest">FINAL SCORE</span>
+                <span className="text-2xl text-trust">{data.score?.toFixed(3)}</span>
+              </div>
+            </div>
+          </div>
+        )}
 
-      {/* Pane 3: Score Ledger */}
-      <div className="w-full md:w-[26%] border-l border-rule bg-ink text-paper p-8 overflow-y-auto">
-        <h3 className="font-display text-xl mb-8 text-card border-b-2 border-rule/30 pb-3 flex items-center justify-between">
-          <span>Score Ledger</span>
-          <span className="font-mono text-xs font-normal opacity-50">COMPUTED</span>
-        </h3>
-        
-        <div className="font-mono text-[11px] space-y-4 mb-10 opacity-80 leading-relaxed tracking-wide">
-          <div className="flex justify-between items-end">
-            <span className="border-b border-paper/20 border-dotted flex-1 mr-4 pb-1">Title fit</span>
-            <span>{data.title_fit?.toFixed(2)} × 0.14 = {(data.title_fit * 0.14).toFixed(3)}</span>
-          </div>
-          <div className="flex justify-between items-end">
-            <span className="border-b border-paper/20 border-dotted flex-1 mr-4 pb-1">Must-have skills</span>
-            <span>{data.must_have_skill_fit?.toFixed(2)} × 0.24 = {(data.must_have_skill_fit * 0.24).toFixed(3)}</span>
-          </div>
-          <div className="flex justify-between items-end">
-            <span className="border-b border-paper/20 border-dotted flex-1 mr-4 pb-1">Eval-framework</span>
-            <span>{data.eval_framework_fit?.toFixed(2)} × 0.08 = {(data.eval_framework_fit * 0.08).toFixed(3)}</span>
-          </div>
-          <div className="flex justify-between items-end text-evidence font-bold">
-            <span className="border-b border-paper/20 border-dotted flex-1 mr-4 pb-1">Semantic fit</span>
-            <span>{data.semantic_career_fit?.toFixed(2)} × 0.22 = {(data.semantic_career_fit * 0.22).toFixed(3)}</span>
-          </div>
-          <div className="flex justify-between items-end">
-            <span className="border-b border-paper/20 border-dotted flex-1 mr-4 pb-1">Exp years fit</span>
-            <span>{data.experience_years_fit?.toFixed(2)} × 0.08 = {(data.experience_years_fit * 0.08).toFixed(3)}</span>
-          </div>
-          <div className="flex justify-between items-end">
-            <span className="border-b border-paper/20 border-dotted flex-1 mr-4 pb-1">Trajectory</span>
-            <span>{data.career_trajectory_fit?.toFixed(2)} × 0.08 = {(data.career_trajectory_fit * 0.08).toFixed(3)}</span>
-          </div>
-          <div className="flex justify-between items-end">
-            <span className="border-b border-paper/20 border-dotted flex-1 mr-4 pb-1">Location</span>
-            <span>{data.location_fit?.toFixed(2)} × 0.06 = {(data.location_fit * 0.06).toFixed(3)}</span>
-          </div>
-        </div>
+        {tab === 'profile' && (
+          <div className="max-w-3xl mx-auto p-5 md:p-8 animate-fade-in">
+            <div className="grid grid-cols-2 gap-6 mb-8">
+              <div className="bg-card border border-rule p-5 card-hover">
+                <div className="text-[10px] uppercase font-bold text-ink/40 tracking-wider mb-1">Name</div>
+                <div className="font-display text-xl">{cand.profile?.anonymized_name || cand.profile?.name || 'Redacted'}</div>
+              </div>
+              <div className="bg-card border border-rule p-5 card-hover">
+                <div className="text-[10px] uppercase font-bold text-ink/40 tracking-wider mb-1">Current Title</div>
+                <div className="text-base font-medium">{cand.profile?.current_title || 'Unknown'}</div>
+              </div>
+              <div className="bg-card border border-rule p-5 card-hover">
+                <div className="text-[10px] uppercase font-bold text-ink/40 tracking-wider mb-1">Location</div>
+                <div className="text-sm">{cand.profile?.location || 'Unknown'}</div>
+              </div>
+              <div className="bg-card border border-rule p-5 card-hover">
+                <div className="text-[10px] uppercase font-bold text-ink/40 tracking-wider mb-1">Candidate ID</div>
+                <div className="text-sm font-mono">{id}</div>
+              </div>
+            </div>
 
-        <div className="font-mono text-[11px] border-t border-rule/30 pt-4 space-y-3 mb-6 tracking-wide">
-          <div className="flex justify-between text-paper/90">
-            <span>FIT SUBTOTAL</span>
-            <span>{data.fit_score?.toFixed(3)}</span>
+            <div className="mb-4 text-[10px] uppercase font-bold text-ink/40 tracking-wider">Diagnostic Flags</div>
+            {data.disqualifiers && data.disqualifiers.length > 0 ? (
+              <div className="space-y-3">
+                {data.disqualifiers.map((d: string, i: number) => (
+                  <div key={i} className="p-4 bg-caution/10 border-l-4 border-caution text-caution text-xs leading-relaxed card-hover">
+                    <span className="font-bold block mb-1 flex items-center gap-1.5">
+                      <AlertTriangle size={12} /> Flag: {d}
+                    </span>
+                    JD flags this as a critical fit risk based on established disqualifier rules.
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-4 bg-trust/10 border-l-4 border-trust text-trust text-xs font-medium flex items-center gap-2">
+                <ShieldCheck size={14} />
+                No disqualifying patterns detected.
+              </div>
+            )}
           </div>
-          <div className="flex justify-between text-paper/70">
-            <span>× BEHAVIOR MODIFIER</span>
-            <span>{data.behavioral_modifier?.toFixed(3)}</span>
-          </div>
-          <div className="flex justify-between text-caution font-bold">
-            <span>− DISQUALIFIER PENALTY</span>
-            <span>{data.penalty?.toFixed(3)}</span>
-          </div>
-        </div>
-
-        <div className="flex justify-between items-baseline font-mono border-t border-rule/50 pt-6 mt-6">
-          <span className="text-sm text-trust font-bold tracking-widest">FINAL SCORE</span>
-          <span className="text-2xl text-trust">{data.score?.toFixed(3)}</span>
-        </div>
+        )}
       </div>
     </div>
   );

@@ -1,9 +1,20 @@
 import { useEffect, useState } from 'react';
+import { AlertCircle, Scale, Shield } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import LivePipelineGraph, { type PipelineSnapshot } from '../components/LivePipelineGraph';
 import { apiUrl } from '../lib/api';
 
+const weightColors = ['#D98E2B', '#3F7D58', '#B5482F', '#D98E2B', '#3F7D58', '#B5482F', '#D98E2B', '#3F7D58', '#B5482F'];
+
+interface MethodologyData {
+  weights: Record<string, number>;
+  disqualifier_rules: string[];
+  must_have_skill_groups?: Record<string, string[]>;
+  nice_to_have_skill_groups?: Record<string, string[]>;
+}
+
 export default function Methodology() {
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<MethodologyData | null>(null);
   const [pipeline, setPipeline] = useState<PipelineSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,10 +35,10 @@ export default function Methodology() {
 
   if (error) {
     return (
-      <div className="max-w-4xl mx-auto py-16 px-8 w-full">
+      <div className="max-w-4xl mx-auto py-16 px-8 w-full animate-fade-in">
         <div className="p-6 bg-caution/10 border-l-4 border-caution flex flex-col items-start gap-3">
           <span className="font-bold text-caution font-mono uppercase tracking-wider text-xs flex items-center gap-2">
-            <span aria-hidden="true">#</span> Data Load Failure
+            <AlertCircle size={14} /> Data Load Failure
           </span>
           <span className="text-ink/90 leading-relaxed text-sm">{error}</span>
         </div>
@@ -38,40 +49,62 @@ export default function Methodology() {
   if (!data) {
     return (
       <div className="max-w-4xl mx-auto py-16 px-8 w-full">
-        <div className="font-mono text-sm text-ink/50 animate-pulse">Reading static methodology parameters...</div>
+        <div className="flex flex-col items-center gap-3">
+          <div className="skeleton h-6 w-64" />
+          <div className="skeleton h-4 w-48" />
+        </div>
       </div>
     );
   }
 
-  return (
-    <div className="max-w-5xl mx-auto py-16 px-8 w-full">
-      <h1 className="text-4xl font-display mb-10 pb-4 border-b-2 border-rule">Methodology</h1>
+  const weightEntries = Object.entries(data.weights) as [string, number][];
+  const chartData = weightEntries.map(([k, v]) => ({
+    name: k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+    weight: v * 100,
+    raw: v
+  }));
 
-      <div className="mb-16">
+  return (
+    <div className="max-w-5xl mx-auto py-12 md:py-16 px-5 md:px-8 w-full animate-fade-in">
+      <div className="mb-8">
+        <h1 className="text-4xl font-display mb-2">Methodology</h1>
+        <p className="text-ink/60 text-sm">How candidate scores are computed — weights, rules, and pipeline architecture.</p>
+      </div>
+
+      <div className="mb-12">
         <LivePipelineGraph snapshot={pipeline} compact />
       </div>
 
-      <div className="grid md:grid-cols-2 gap-10 mb-16">
-        <div>
-          <h2 className="text-xl font-display mb-6">Current Weights</h2>
-          <div className="bg-card border border-rule shadow-sm">
-            {Object.entries(data.weights).map(([k, v], idx, arr) => (
+      <div className="grid md:grid-cols-2 gap-8 mb-12">
+        <div className="card-hover">
+          <div className="flex items-center gap-2 mb-5">
+            <Scale size={18} className="text-evidence" />
+            <h2 className="text-xl font-display">Current Weights</h2>
+          </div>
+          <div className="bg-card border border-rule shadow-sm overflow-hidden">
+            {weightEntries.map(([k, v], idx, arr) => (
               <div key={k} className={`flex justify-between items-center p-4 font-mono text-[11px] ${idx !== arr.length - 1 ? 'border-b border-rule/50' : ''}`}>
-                <span className="text-ink/80">{k}</span>
+                <span className="text-ink/80 capitalize flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: weightColors[idx % weightColors.length] }} />
+                  {k.replace(/_/g, ' ')}
+                </span>
                 <span className="font-bold">{Number(v).toFixed(2)}</span>
               </div>
             ))}
           </div>
         </div>
 
-        <div>
-          <h2 className="text-xl font-display mb-6">Disqualifier Rules</h2>
+        <div className="card-hover">
+          <div className="flex items-center gap-2 mb-5">
+            <Shield size={18} className="text-caution" />
+            <h2 className="text-xl font-display">Disqualifier Rules</h2>
+          </div>
           <div className="bg-card border-t-4 border-caution border-l border-r border-b border-rule shadow-sm p-6">
             <div className="font-mono text-[10px] text-caution uppercase tracking-widest font-bold mb-4">CRITICAL FIT RISKS</div>
-            <ul className="space-y-4 text-sm text-ink/90">
+            <ul className="space-y-3 text-sm text-ink/90">
               {data.disqualifier_rules.map((rule: string) => (
-                <li key={rule} className="flex gap-3 items-start">
-                  <span className="text-caution mt-0.5" aria-hidden="true">#</span>
+                <li key={rule} className="flex gap-3 items-start group transition-all">
+                  <span className="text-caution mt-0.5 font-mono text-xs" aria-hidden="true">#</span>
                   <span className="leading-snug">{rule.replace(/_/g, ' ')}</span>
                 </li>
               ))}
@@ -79,6 +112,63 @@ export default function Methodology() {
           </div>
         </div>
       </div>
+
+      <div className="mb-12 card-hover">
+        <h2 className="text-xl font-display mb-5">Weight Distribution</h2>
+        <div className="bg-card border border-rule shadow-sm p-4 md:p-6">
+          {chartData.length > 0 && (
+            <ResponsiveContainer width="100%" height={320}>
+              <BarChart data={chartData} layout="vertical" margin={{ top: 4, right: 16, left: 100, bottom: 4 }}>
+                <XAxis type="number" domain={[0, 30]} tick={{ fontSize: 10, fontFamily: 'IBM Plex Mono' }} axisLine={false} tickLine={false} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fontFamily: 'IBM Plex Mono' }} axisLine={false} tickLine={false} width={90} />
+                <Tooltip
+                  contentStyle={{ background: '#16202B', border: '1px solid rgba(247,246,242,0.15)', borderRadius: 4, fontSize: 12, fontFamily: 'IBM Plex Mono' }}
+                  labelStyle={{ color: '#D98E2B' }}
+                  formatter={(value: unknown) => typeof value === 'number' ? `${value.toFixed(1)}%` : value as React.ReactNode}
+                />
+                <Bar dataKey="weight" radius={[0, 2, 2, 0]} maxBarSize={20}>
+                  {chartData.map((_, i) => (
+                    <Cell key={i} fill={weightColors[i % weightColors.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+          <div className="mt-4 text-[10px] font-mono text-ink/40 text-center">
+            Bar length represents each component's percentage contribution to the final hybrid score.
+          </div>
+        </div>
+      </div>
+
+      {data.must_have_skill_groups && Object.keys(data.must_have_skill_groups).length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-xl font-display mb-5">Skill Groups</h2>
+          <div className="grid md:grid-cols-2 gap-4">
+            {Object.entries(data.must_have_skill_groups).map(([group, skills]) => (
+              <div key={group} className="bg-card border border-rule p-5 card-hover">
+                <div className="font-mono text-[10px] text-evidence uppercase tracking-wider font-bold mb-2">Must-have</div>
+                <h3 className="font-display text-base mb-2 capitalize">{group.replace(/_/g, ' ')}</h3>
+                <div className="flex flex-wrap gap-1.5">
+                  {skills.map((s: string) => (
+                    <span key={s} className="tag-evidence text-[9px]">{s}</span>
+                  ))}
+                </div>
+              </div>
+            ))}
+            {data.nice_to_have_skill_groups && Object.entries(data.nice_to_have_skill_groups).map(([group, skills]) => (
+              <div key={group} className="bg-card border border-rule p-5 card-hover">
+                <div className="font-mono text-[10px] text-trust uppercase tracking-wider font-bold mb-2">Nice-to-have</div>
+                <h3 className="font-display text-base mb-2 capitalize">{group.replace(/_/g, ' ')}</h3>
+                <div className="flex flex-wrap gap-1.5">
+                  {skills.map((s: string) => (
+                    <span key={s} className="tag-trust text-[9px]">{s}</span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

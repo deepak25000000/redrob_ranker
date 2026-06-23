@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, FileSearch, Filter, Gauge, GitBranch, ListChecks, Scale } from 'lucide-react';
+import { ArrowRight, FileSearch, Filter, Gauge, GitBranch, ListChecks, Scale, Activity } from 'lucide-react';
 
 export type PipelineStage = {
   id: string;
@@ -53,7 +53,7 @@ const fallbackStages: PipelineStage[] = [
   }
 ];
 
-const iconMap = {
+const iconMap: Record<string, typeof FileSearch> = {
   raw: FileSearch,
   honeypot: Filter,
   hybrid: GitBranch,
@@ -69,28 +69,35 @@ type Props = {
   onStageSelect?: (stageId: string) => void;
 };
 
+function AnimatedCount({ value, label }: { value: number; label: string }) {
+  return (
+    <span className="animate-fade-in-fast">
+      {value} {label}
+    </span>
+  );
+}
+
 export default function LivePipelineGraph({ snapshot, activeStage, compact = false, onStageSelect }: Props) {
-  const stages = snapshot?.stages?.length ? snapshot.stages : fallbackStages;
-  const [selectedId, setSelectedId] = useState(stages[0]?.id || 'raw');
+  const stages = useMemo(
+    () => snapshot?.stages?.length ? snapshot.stages : fallbackStages,
+    [snapshot?.stages]
+  );
+  const [stateSelectedId, setStateSelectedId] = useState(stages[0]?.id || 'raw');
   const [idleIndex, setIdleIndex] = useState(0);
 
-  useEffect(() => {
-    if (activeStage) {
-      setSelectedId(activeStage);
-      return;
-    }
+  const selectedId = activeStage || stateSelectedId;
 
+  useEffect(() => {
+    if (activeStage) return;
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
     if (media.matches || snapshot?.has_run) return;
-
     const timer = window.setInterval(() => {
       setIdleIndex((index) => {
         const next = (index + 1) % stages.length;
-        setSelectedId(stages[next].id);
+        setStateSelectedId(stages[next].id);
         return next;
       });
-    }, 1600);
-
+    }, 1800);
     return () => window.clearInterval(timer);
   }, [activeStage, snapshot?.has_run, stages]);
 
@@ -100,9 +107,11 @@ export default function LivePipelineGraph({ snapshot, activeStage, compact = fal
   );
 
   const selectStage = (stageId: string) => {
-    setSelectedId(stageId);
+    setStateSelectedId(stageId);
     onStageSelect?.(stageId);
   };
+
+  const isActiveStage = (stageId: string) => stageId === selected.id || stageId === activeStage || (!snapshot?.has_run && stages.findIndex(s => s.id === stageId) === idleIndex);
 
   return (
     <section className={`pipeline-board ${compact ? 'pipeline-board--compact' : ''}`} aria-labelledby="pipeline-title">
@@ -118,28 +127,39 @@ export default function LivePipelineGraph({ snapshot, activeStage, compact = fal
             <>
               <span>{snapshot.source || 'latest run'}</span>
               {typeof snapshot.runtime_seconds === 'number' && (
-                <strong>{snapshot.runtime_seconds.toFixed(2)}s</strong>
+                <strong className="animate-fade-in">{snapshot.runtime_seconds.toFixed(2)}s runtime</strong>
+              )}
+              {typeof snapshot.top_candidate_score === 'number' && (
+                <span>top score: <strong>{snapshot.top_candidate_score.toFixed(3)}</strong></span>
               )}
             </>
           ) : (
-            <span>Idle map. Run the bundled sample to populate live counts.</span>
+            <span className="flex items-center gap-2">
+              <Activity size={12} className="text-evidence/60" />
+              Idle map. Run the bundled sample to populate live counts.
+            </span>
           )}
         </div>
       </div>
 
       <div className="pipeline-board__graph" role="list" aria-label="Ranking pipeline stages">
         {stages.map((stage, index) => {
-          const Icon = iconMap[stage.id as keyof typeof iconMap] || FileSearch;
-          const isActive = stage.id === selected.id || stage.id === activeStage || (!snapshot?.has_run && index === idleIndex);
+          const Icon = iconMap[stage.id] || FileSearch;
+          const active = isActiveStage(stage.id);
           const hasCounts = typeof stage.count_in === 'number' || typeof stage.count_out === 'number';
           return (
-            <div className="pipeline-board__step" role="listitem" key={stage.id}>
+            <div
+              className="pipeline-board__step"
+              role="listitem"
+              key={stage.id}
+              style={{ animationDelay: `${index * 80}ms` }}
+            >
               <button
                 type="button"
                 onMouseEnter={() => selectStage(stage.id)}
                 onFocus={() => selectStage(stage.id)}
                 onClick={() => selectStage(stage.id)}
-                className={`pipeline-node ${isActive ? 'pipeline-node--active' : ''}`}
+                className={`pipeline-node ${active ? 'pipeline-node--active' : ''}`}
                 aria-pressed={stage.id === selected.id}
               >
                 <span className="pipeline-node__icon" aria-hidden="true">
@@ -147,7 +167,7 @@ export default function LivePipelineGraph({ snapshot, activeStage, compact = fal
                 </span>
                 <span className="pipeline-node__label">{stage.label}</span>
                 <span className="pipeline-node__metric font-mono">
-                  {hasCounts ? `${stage.count_in ?? '-'} -> ${stage.count_out ?? '-'}` : 'inspect'}
+                  {hasCounts ? `${stage.count_in ?? '-'} → ${stage.count_out ?? '-'}` : 'inspect'}
                 </span>
               </button>
               {index < stages.length - 1 && (
@@ -158,15 +178,21 @@ export default function LivePipelineGraph({ snapshot, activeStage, compact = fal
         })}
       </div>
 
-      <div className="pipeline-board__drawer">
-        <div>
+      <div className="pipeline-board__drawer" key={selected.id}>
+        <div className="animate-fade-in">
           <div className="eyebrow">{selected.label}</div>
           <p>{selected.why}</p>
         </div>
         <div className="pipeline-board__numbers font-mono" aria-live="polite">
-          {typeof selected.count_in === 'number' && <span>{selected.count_in} in</span>}
-          {typeof selected.excluded === 'number' && selected.excluded > 0 && <span>{selected.excluded} excluded</span>}
-          {typeof selected.count_out === 'number' && <span>{selected.count_out} out</span>}
+          {typeof selected.count_in === 'number' && (
+            <span><AnimatedCount value={selected.count_in} label="in" /></span>
+          )}
+          {typeof selected.excluded === 'number' && selected.excluded > 0 && (
+            <span><AnimatedCount value={selected.excluded} label="excluded" /></span>
+          )}
+          {typeof selected.count_out === 'number' && (
+            <span><AnimatedCount value={selected.count_out} label="out" /></span>
+          )}
           {snapshot?.top_candidate_id && selected.id === 'judge' && (
             <Link to={`/results/${snapshot.top_candidate_id}#evidence`} className="pipeline-board__evidence-link">
               Open top evidence file

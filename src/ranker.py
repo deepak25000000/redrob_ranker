@@ -17,13 +17,13 @@ from .reasoning import generate_reasoning
 
 
 def rank_candidates(candidates: List[Dict[str, Any]], top_n: int = config.TOP_N):
-    results, honeypot_count = score_all(candidates)
+    results, honeypot_count = score_all(candidates, top_n=top_n)
     top = results[:top_n]
 
     for r in top:
         r["reasoning"] = generate_reasoning(r)
 
-    return top, honeypot_count, len(results)
+    return top, honeypot_count, len(candidates) - honeypot_count
 
 
 def write_submission_csv(ranked: List[Dict[str, Any]], out_path: str) -> None:

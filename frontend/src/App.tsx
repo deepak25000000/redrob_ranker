@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { Menu, X, Sparkles } from 'lucide-react';
 import RunPage from './pages/RunPage';
 import ResultsPage from './pages/ResultsPage';
 import CandidateDetail from './pages/CandidateDetail';
@@ -9,26 +10,31 @@ import ExportPage from './pages/ExportPage';
 import LivePipelineGraph, { type PipelineSnapshot } from './components/LivePipelineGraph';
 import { apiUrl } from './lib/api';
 
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
+  return null;
+}
+
+function PageTransition({ children }: { children: React.ReactNode }) {
+  return <div className="animate-fade-in">{children}</div>;
+}
+
 function App() {
   return (
     <Router>
+      <ScrollToTop />
       <div className="min-h-screen flex flex-col font-body bg-paper text-ink selection:bg-evidence/30">
-        <header className="border-b border-rule bg-card/95 backdrop-blur px-5 md:px-8 py-5 flex items-center justify-between sticky top-0 z-50">
-          <Link to="/" className="text-xl md:text-2xl font-display font-semibold tracking-tight">
-            Redrob Ranker
-          </Link>
-          <Navigation />
-        </header>
-
+        <Header />
         <main className="flex-1 flex flex-col relative">
           <Routes>
-            <Route path="/" element={<Overview />} />
-            <Route path="/run" element={<RunPage />} />
-            <Route path="/results" element={<ResultsPage />} />
-            <Route path="/results/:id" element={<CandidateDetail />} />
-            <Route path="/methodology" element={<Methodology />} />
-            <Route path="/honeypots" element={<Honeypots />} />
-            <Route path="/export" element={<ExportPage />} />
+            <Route path="/" element={<PageTransition><Overview /></PageTransition>} />
+            <Route path="/run" element={<PageTransition><RunPage /></PageTransition>} />
+            <Route path="/results" element={<PageTransition><ResultsPage /></PageTransition>} />
+            <Route path="/results/:id" element={<PageTransition><CandidateDetail /></PageTransition>} />
+            <Route path="/methodology" element={<PageTransition><Methodology /></PageTransition>} />
+            <Route path="/honeypots" element={<PageTransition><Honeypots /></PageTransition>} />
+            <Route path="/export" element={<PageTransition><ExportPage /></PageTransition>} />
           </Routes>
         </main>
       </div>
@@ -36,26 +42,53 @@ function App() {
   );
 }
 
-function Navigation() {
+function Header() {
   const location = useLocation();
+  const [mobileOpen, setMobileOpen] = useState(false);
+
   const navLink = (path: string, label: string) => {
     const isActive = location.pathname.startsWith(path);
     return (
       <Link
         to={path}
-        className={`text-xs md:text-sm font-medium transition-colors ${isActive ? 'text-evidence border-b-2 border-evidence pb-1' : 'text-ink/70 hover:text-ink hover:border-b-2 hover:border-rule pb-1'}`}
+        className={`relative text-xs md:text-sm font-medium transition-colors ${isActive ? 'text-evidence' : 'text-ink/70 hover:text-ink'}`}
       >
         {label}
+        {isActive && <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-evidence rounded-full" />}
       </Link>
     );
   };
 
   return (
-    <nav className="flex gap-4 md:gap-8">
-      {navLink('/run', 'Run Ranking')}
-      {navLink('/results', 'Results Ledger')}
-      {navLink('/methodology', 'Methodology')}
-    </nav>
+    <header className="border-b border-rule/60 glass sticky top-0 z-50 px-5 md:px-8 py-4 flex items-center justify-between">
+      <Link to="/" className="flex items-center gap-2 text-xl md:text-2xl font-display font-semibold tracking-tight group">
+        <Sparkles size={22} className="text-evidence group-hover:scale-110 transition-transform" />
+        <span>Redrob Ranker</span>
+      </Link>
+
+      <nav className="hidden md:flex gap-8 items-center">
+        {navLink('/run', 'Run Ranking')}
+        {navLink('/results', 'Results Ledger')}
+        {navLink('/methodology', 'Methodology')}
+      </nav>
+
+      <button
+        type="button"
+        className="md:hidden p-2 text-ink/70 hover:text-ink transition-colors"
+        onClick={() => setMobileOpen(!mobileOpen)}
+        aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+      >
+        {mobileOpen ? <X size={22} /> : <Menu size={22} />}
+      </button>
+
+        {mobileOpen && (
+          <div className="absolute top-full left-0 right-0 glass-dark border-b border-rule/30 p-5 flex flex-col gap-4 md:hidden animate-slide-up-sm">
+            <Link to="/run" onClick={() => setMobileOpen(false)} className="text-sm font-medium text-card hover:text-evidence transition-colors">Run Ranking</Link>
+            <Link to="/results" onClick={() => setMobileOpen(false)} className="text-sm font-medium text-card hover:text-evidence transition-colors">Results Ledger</Link>
+            <Link to="/methodology" onClick={() => setMobileOpen(false)} className="text-sm font-medium text-card hover:text-evidence transition-colors">Methodology</Link>
+          </div>
+        )}
+    </header>
   );
 }
 
@@ -63,32 +96,36 @@ function Overview() {
   const [pipeline, setPipeline] = useState<PipelineSnapshot | null>(null);
   const [demoState, setDemoState] = useState<'idle' | 'running' | 'complete' | 'error'>('idle');
   const [activeStage, setActiveStage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     fetch(apiUrl('/api/pipeline'))
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => data && setPipeline(data))
       .catch(() => undefined);
+    const t = setTimeout(() => setVisible(true), 100);
+    return () => clearTimeout(t);
   }, []);
 
   const runMiniDemo = async () => {
     setDemoState('running');
-    setError(null);
     const stageIds = ['raw', 'honeypot', 'hybrid', 'cross_encoder', 'judge', 'output'];
     const timers = stageIds.map((id, index) =>
-      window.setTimeout(() => setActiveStage(id), index * 650)
+      window.setTimeout(() => { setActiveStage(id); }, index * 700)
     );
 
     try {
       const res = await fetch(apiUrl('/api/rank'), { method: 'POST', body: new FormData() });
-      if (!res.ok) throw new Error(`Ranking server returned ${res.status}.`);
+      if (!res.ok) {
+        let msg = `Ranking server returned ${res.status}.`;
+        try { const d = await res.json(); if (d.detail) msg = d.detail; } catch { /* noop */ }
+        throw new Error(msg);
+      }
       const data = await res.json();
       setPipeline(data.pipeline);
       setActiveStage('output');
       setDemoState('complete');
-    } catch (err: any) {
-      setError(err.message || 'Could not run the bundled sample.');
+    } catch {
       setDemoState('error');
       setActiveStage(null);
     } finally {
@@ -98,10 +135,12 @@ function Overview() {
 
   return (
     <div className="w-full">
-      <section className="home-hero">
+      <section className={`home-hero transition-opacity duration-700 ${visible ? 'opacity-100' : 'opacity-0'}`}>
         <div className="home-hero__copy">
           <div className="eyebrow">Evidence-first candidate ranking</div>
-          <h1>Evidence and reasoning you can audit.</h1>
+          <h1>
+            Evidence and reasoning <span className="text-gradient">you can audit.</span>
+          </h1>
           <p>
             Redrob Ranker is built for the hidden-gem problem: candidates whose career histories prove the work,
             even when their resumes do not repeat the job description word for word.
@@ -113,11 +152,28 @@ function Overview() {
               disabled={demoState === 'running'}
               className="primary-action"
             >
-              {demoState === 'running' ? 'Running sample...' : 'Run bundled sample'}
+              {demoState === 'running' ? (
+                <span className="flex items-center gap-2">
+                  <span className="w-2 h-2 bg-ink rounded-full animate-pulse" />
+                  Running sample...
+                </span>
+              ) : 'Run bundled sample'}
             </button>
             <Link to="/run" className="secondary-action">Upload candidate file</Link>
           </div>
-          {error && <div className="demo-error">{error}</div>}
+          {demoState === 'error' && (
+            <div className="demo-error">
+              <span className="font-bold block mb-1"># Diagnostic Alert</span>
+              Could not reach the ranking server. Start the backend or use the bundled sample link below.
+              <button
+                type="button"
+                onClick={runMiniDemo}
+                className="block mt-3 text-evidence underline decoration-evidence/50 hover:text-card transition-colors text-xs font-mono"
+              >
+                Retry
+              </button>
+            </div>
+          )}
           {demoState === 'complete' && pipeline?.top_candidate_id && (
             <Link to={`/results/${pipeline.top_candidate_id}#evidence`} className="demo-complete">
               Open {pipeline.top_candidate_id} evidence view
@@ -127,7 +183,7 @@ function Overview() {
         <LivePipelineGraph snapshot={pipeline} activeStage={activeStage} />
       </section>
 
-      <section className="work-section" aria-labelledby="how-it-works">
+      <section className={`work-section transition-all duration-700 delay-200 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`} aria-labelledby="how-it-works">
         <div className="work-section__intro">
           <div className="eyebrow">How Redrob Ranker Works</div>
           <h2 id="how-it-works">A skeptical pipeline for a noisy hiring pool.</h2>
@@ -173,7 +229,7 @@ function Overview() {
         </div>
       </section>
 
-      <section className="comparison-section" aria-label="Ranking contrast">
+      <section className={`comparison-section transition-all duration-700 delay-400 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`} aria-label="Ranking contrast">
         <div className="comparison-card comparison-card--risk">
           <div className="comparison-card__dot" aria-hidden="true"></div>
           <h2>The Keyword Stuffer</h2>

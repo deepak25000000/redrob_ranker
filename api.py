@@ -107,6 +107,7 @@ async def rank(
 ):
     import pathlib
     import tempfile
+    import asyncio
     
     t0 = time.time()
     
@@ -117,32 +118,37 @@ async def rank(
         else:
             raise HTTPException(status_code=400, detail=f"Local file '{local_filename}' not found on the server.")
     elif file is not None:
-        local_path = pathlib.Path(file.filename)
-        if local_path.exists() and local_path.is_file():
-            path = str(local_path)
-        else:
-            suffix = "".join(pathlib.Path(file.filename).suffixes)
-            with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-                tmp.write(await file.read())
-                path = tmp.name
+        # Stream upload to a temp file in chunks to avoid loading 100s of MB into memory
+        suffix = "".join(pathlib.Path(file.filename or "upload").suffixes)
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+            while True:
+                chunk = await file.read(1024 * 1024)  # 1MB chunks
+                if not chunk:
+                    break
+                tmp.write(chunk)
+            path = tmp.name
     else:
         path = "sample_data/sample_candidates.json"
 
+    # Run CPU-intensive work in a thread pool to avoid blocking the event loop
+    def _run_pipeline():
+        candidates = list(load_candidates(path))
+        ranked, honeypot_count, total_scored = rank_candidates(candidates, top_n=top_n)
+        # Collect honeypot info from the same candidates (avoid re-scanning)
+        honeypots = []
+        for candidate in candidates:
+            flags = detect_honeypot_flags(candidate)
+            if len(flags) >= 2:
+                honeypots.append({
+                    "candidate_id": candidate.get("candidate_id"),
+                    "name": candidate.get("profile", {}).get("anonymized_name"),
+                    "flags": flags
+                })
+        return candidates, ranked, honeypot_count, total_scored, honeypots
 
-    candidates = list(load_candidates(path))
+    candidates, ranked, honeypot_count, total_scored, honeypots = await asyncio.to_thread(_run_pipeline)
+
     app_state["pool"] = candidates
-    
-    ranked, honeypot_count, total_scored = rank_candidates(candidates, top_n=top_n)
-    honeypots = []
-    for candidate in candidates:
-        flags = detect_honeypot_flags(candidate)
-        if len(flags) >= 2:
-            honeypots.append({
-                "candidate_id": candidate.get("candidate_id"),
-                "name": candidate.get("profile", {}).get("anonymized_name"),
-                "flags": flags
-            })
-    
     app_state["ranked"] = ranked
     app_state["honeypot_count"] = honeypot_count
     app_state["total_scored"] = total_scored
