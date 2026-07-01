@@ -124,13 +124,10 @@ async def rank(
         source_name = local_filename
     elif file is not None:
         # Stream upload to a temp file in chunks to avoid loading 100s of MB into memory
+        import shutil
         suffix = "".join(pathlib.Path(file.filename or "upload").suffixes)
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-            while True:
-                chunk = await file.read(1024 * 1024)  # 1MB chunks
-                if not chunk:
-                    break
-                tmp.write(chunk)
+            shutil.copyfileobj(file.file, tmp)
             path = tmp.name
         source_name = file.filename or "upload"
     else:
