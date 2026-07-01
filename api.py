@@ -99,6 +99,13 @@ def pipeline_snapshot() -> Dict[str, Any]:
         ]
     }
 
+import threading
+import uuid
+
+# Job store for async processing
+_jobs: Dict[str, Dict[str, Any]] = {}
+
+
 @app.post("/api/rank")
 async def rank(
     top_n: int = Form(config.TOP_N),
@@ -107,16 +114,14 @@ async def rank(
 ):
     import pathlib
     import tempfile
-    import asyncio
-    
-    t0 = time.time()
-    
+
     if local_filename:
         local_path = pathlib.Path(local_filename)
         if local_path.exists() and local_path.is_file():
             path = str(local_path)
         else:
             raise HTTPException(status_code=400, detail=f"Local file '{local_filename}' not found on the server.")
+        source_name = local_filename
     elif file is not None:
         # Stream upload to a temp file in chunks to avoid loading 100s of MB into memory
         suffix = "".join(pathlib.Path(file.filename or "upload").suffixes)
@@ -127,44 +132,58 @@ async def rank(
                     break
                 tmp.write(chunk)
             path = tmp.name
+        source_name = file.filename or "upload"
     else:
         path = "sample_data/sample_candidates.json"
+        source_name = "sample_data/sample_candidates.json"
 
-    # Run CPU-intensive work in a thread pool to avoid blocking the event loop
-    def _run_pipeline():
-        candidates = list(load_candidates(path))
-        ranked, honeypot_count, total_scored = rank_candidates(candidates, top_n=top_n)
-        # Collect honeypot info from the same candidates (avoid re-scanning)
-        honeypots = []
-        for candidate in candidates:
-            flags = detect_honeypot_flags(candidate)
-            if len(flags) >= 2:
-                honeypots.append({
-                    "candidate_id": candidate.get("candidate_id"),
-                    "name": candidate.get("profile", {}).get("anonymized_name"),
-                    "flags": flags
-                })
-        return candidates, ranked, honeypot_count, total_scored, honeypots
+    job_id = str(uuid.uuid4())
+    _jobs[job_id] = {"status": "processing", "progress": "Loading candidates...", "error": None}
 
-    candidates, ranked, honeypot_count, total_scored, honeypots = await asyncio.to_thread(_run_pipeline)
+    def _run_pipeline_bg():
+        try:
+            t0 = time.time()
+            _jobs[job_id]["progress"] = "Loading candidates from file..."
+            candidates = list(load_candidates(path))
+            _jobs[job_id]["progress"] = f"Loaded {len(candidates)} candidates. Scoring..."
 
-    app_state["pool"] = candidates
-    app_state["ranked"] = ranked
-    app_state["honeypot_count"] = honeypot_count
-    app_state["total_scored"] = total_scored
-    app_state["honeypots"] = honeypots
-    
-    t1 = time.time()
-    app_state["runtime_seconds"] = t1 - t0
-    app_state["last_run_source"] = file.filename if file is not None else "sample_data/sample_candidates.json"
-    
-    return {
-        "ranked": ranked,
-        "honeypot_count": honeypot_count,
-        "total_scored": total_scored,
-        "runtime_seconds": t1 - t0,
-        "pipeline": pipeline_snapshot()
-    }
+            ranked, honeypot_count, total_scored, honeypots = rank_candidates(candidates, top_n=top_n)
+
+            t1 = time.time()
+            app_state["pool"] = candidates
+            app_state["ranked"] = ranked
+            app_state["honeypot_count"] = honeypot_count
+            app_state["total_scored"] = total_scored
+            app_state["honeypots"] = honeypots
+            app_state["runtime_seconds"] = t1 - t0
+            app_state["last_run_source"] = source_name
+
+            _jobs[job_id] = {
+                "status": "done",
+                "progress": "Complete",
+                "error": None,
+                "result": {
+                    "honeypot_count": honeypot_count,
+                    "total_scored": total_scored,
+                    "runtime_seconds": t1 - t0,
+                    "ranked_count": len(ranked),
+                }
+            }
+        except Exception as e:
+            _jobs[job_id] = {"status": "error", "progress": None, "error": str(e)}
+
+    thread = threading.Thread(target=_run_pipeline_bg, daemon=True)
+    thread.start()
+
+    return {"job_id": job_id, "status": "processing"}
+
+
+@app.get("/api/rank/status/{job_id}")
+async def rank_status(job_id: str):
+    job = _jobs.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return job
 
 
 @app.get("/api/pipeline")
@@ -246,7 +265,7 @@ async def rerank(req: RerankRequest):
     original_weights = config.COMPONENT_WEIGHTS.copy()
     config.COMPONENT_WEIGHTS.update(req.weights)
     
-    ranked, honeypot_count, total_scored = rank_candidates(app_state["pool"], top_n=config.TOP_N)
+    ranked, honeypot_count, total_scored, _honeypots = rank_candidates(app_state["pool"], top_n=config.TOP_N)
     app_state["ranked"] = ranked
     
     # Restore original
@@ -268,7 +287,7 @@ async def methodology():
             "TITLE_CHASING",
             "NO_VISA"
         ], # Summarized from src
-        "jd_facets": jd_requirements.FACETS
+        "jd_facets": jd_requirements.JD_FACETS
     }
 
 @app.get("/api/export.csv")
@@ -286,6 +305,29 @@ async def export_csv():
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=submission.csv"}
     )
+
+@app.get("/api/ranking")
+async def get_ranking():
+    ranked = app_state.get("ranked", [])
+    result = []
+    for i, r in enumerate(ranked, start=1):
+        cand = r.get("candidate", {})
+        profile = cand.get("profile", {})
+        skills = cand.get("skills", [])
+        result.append({
+            "candidate_id": r["candidate_id"],
+            "rank": i,
+            "score": r["score"],
+            "reasoning": r["reasoning"],
+            "name": profile.get("anonymized_name"),
+            "current_title": profile.get("current_title"),
+            "current_company": profile.get("current_company"),
+            "years_of_experience": profile.get("years_of_experience"),
+            "location": profile.get("location"),
+            "country": profile.get("country"),
+            "top_skills": sorted([s["name"] for s in skills], key=lambda s: s.lower())[:8],
+        })
+    return {"ranked": result, "count": len(result)}
 
 @app.post("/api/validate")
 async def validate_results():

@@ -17,13 +17,13 @@ from .reasoning import generate_reasoning
 
 
 def rank_candidates(candidates: List[Dict[str, Any]], top_n: int = config.TOP_N):
-    results, honeypot_count = score_all(candidates, top_n=top_n)
+    results, honeypot_count, honeypots_info = score_all(candidates, top_n=top_n)
     top = results[:top_n]
 
     for r in top:
         r["reasoning"] = generate_reasoning(r)
 
-    return top, honeypot_count, len(candidates) - honeypot_count
+    return top, honeypot_count, len(candidates) - honeypot_count, honeypots_info
 
 
 def write_submission_csv(ranked: List[Dict[str, Any]], out_path: str) -> None:
@@ -49,7 +49,7 @@ def run(candidates_path: str, out_path: str, top_n: int = config.TOP_N, verbose:
             "Run against the full candidates.jsonl(.gz) for a spec-compliant submission."
         )
 
-    ranked, honeypot_count, scored_count = rank_candidates(candidates, top_n=effective_n)
+    ranked, honeypot_count, scored_count, _honeypots_info = rank_candidates(candidates, top_n=effective_n)
     t2 = time.time()
     if verbose:
         print(f"Scored {scored_count} candidates ({honeypot_count} excluded as honeypots) in {t2 - t1:.2f}s")

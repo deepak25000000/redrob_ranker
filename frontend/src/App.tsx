@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { Menu, X, Sparkles, BarChart3, Shield, Download } from 'lucide-react';
+import { Menu, X, Sparkles, BarChart3, Shield, Download, LayoutDashboard } from 'lucide-react';
 import RunPage from './pages/RunPage';
 import ResultsPage from './pages/ResultsPage';
 import CandidateDetail from './pages/CandidateDetail';
 import Methodology from './pages/Methodology';
 import Honeypots from './pages/Honeypots';
 import ExportPage from './pages/ExportPage';
+import DashboardPage from './pages/DashboardPage';
 import LivePipelineGraph, { type PipelineSnapshot } from './components/LivePipelineGraph';
 import { apiUrl } from './lib/api';
 
@@ -29,6 +30,7 @@ function App() {
         <main className="flex-1 flex flex-col relative">
           <Routes>
             <Route path="/" element={<PageTransition><Overview /></PageTransition>} />
+            <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/run" element={<PageTransition><RunPage /></PageTransition>} />
             <Route path="/results" element={<PageTransition><ResultsPage /></PageTransition>} />
             <Route path="/results/:id" element={<PageTransition><CandidateDetail /></PageTransition>} />
@@ -72,6 +74,7 @@ function Header() {
       </Link>
 
       <nav className="hidden md:flex gap-1 items-center">
+        {navLink('/dashboard', 'Dashboard', <LayoutDashboard size={14} />)}
         {navLink('/run', 'Run', <BarChart3 size={14} />)}
         {navLink('/results', 'Results', <Shield size={14} />)}
         {navLink('/methodology', 'Methodology', <Download size={14} />)}
@@ -88,6 +91,9 @@ function Header() {
 
       {mobileOpen && (
         <div className="absolute top-full left-0 right-0 glass-dark border-b border-rule/30 p-5 flex flex-col gap-3 md:hidden animate-slide-up-sm">
+          <Link to="/dashboard" onClick={() => setMobileOpen(false)} className="flex items-center gap-2 text-sm font-medium text-[#94A3B8] hover:text-evidence transition-colors px-3 py-2 rounded-lg hover:bg-white/5">
+            <LayoutDashboard size={14} /> Dashboard
+          </Link>
           <Link to="/run" onClick={() => setMobileOpen(false)} className="flex items-center gap-2 text-sm font-medium text-[#94A3B8] hover:text-evidence transition-colors px-3 py-2 rounded-lg hover:bg-white/5">
             <BarChart3 size={14} /> Run Ranking
           </Link>
@@ -112,6 +118,7 @@ function Footer() {
           Redrob Ranker — Evidence-first candidate ranking
         </div>
         <div className="flex items-center gap-4">
+          <Link to="/dashboard" className="text-xs text-[#64748B] hover:text-evidence transition-colors font-mono">Dashboard</Link>
           <Link to="/methodology" className="text-xs text-[#64748B] hover:text-evidence transition-colors font-mono">Methodology</Link>
           <Link to="/honeypots" className="text-xs text-[#64748B] hover:text-evidence transition-colors font-mono">Honeypots</Link>
           <Link to="/export" className="text-xs text-[#64748B] hover:text-evidence transition-colors font-mono">Export</Link>

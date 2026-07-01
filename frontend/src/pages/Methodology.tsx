@@ -19,7 +19,7 @@ export default function Methodology() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('/methodology.json')
+    fetch(apiUrl('/api/methodology'))
       .then(res => {
         if (!res.ok) throw new Error('Failed to load methodology config.');
         return res.json();

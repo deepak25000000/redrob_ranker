@@ -140,7 +140,7 @@ def score_all(candidates: List[Dict[str, Any]], semantic_backend=None, top_n: in
 
     if semantic_backend is None:
         from .semantic import get_backend
-        semantic_backend = get_backend("auto")
+        semantic_backend = get_backend("tfidf")
 
     all_texts = candidate_texts + JD_FACET_TEXTS
     all_matrix = semantic_backend.fit_transform(all_texts)
@@ -163,6 +163,7 @@ def score_all(candidates: List[Dict[str, Any]], semantic_backend=None, top_n: in
 
     heap = []
     honeypot_count = 0
+    honeypots_info = []
 
     semantic_weight = config.COMPONENT_WEIGHTS.get("semantic_career_fit", 0.22)
     max_other_components = 1.0 - semantic_weight
@@ -177,6 +178,11 @@ def score_all(candidates: List[Dict[str, Any]], semantic_backend=None, top_n: in
         flags = honeypot.detect_honeypot_flags(candidate)
         if len(flags) >= 2:
             honeypot_count += 1
+            honeypots_info.append({
+                "candidate_id": candidate.get("candidate_id"),
+                "name": candidate.get("profile", {}).get("anonymized_name"),
+                "flags": flags
+            })
             continue  # excluded entirely, not ranked
 
         # Pruning check
@@ -265,4 +271,4 @@ def score_all(candidates: List[Dict[str, Any]], semantic_backend=None, top_n: in
     results.sort(key=lambda r: r["candidate_id"])  # stable pre-sort for deterministic tie-breaks
     results.sort(key=lambda r: r["score"], reverse=True)
 
-    return results, honeypot_count
+    return results, honeypot_count, honeypots_info

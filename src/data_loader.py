@@ -34,22 +34,21 @@ def iter_candidates(path: str) -> Iterator[Dict[str, Any]]:
                     yield _loads(line)
 
     elif suffixes.endswith(".jsonl"):
-        with open(p, "rb", buffering=_READ_BUFFER_SIZE) as raw:
-            f = io.TextIOWrapper(raw, encoding="utf-8")
+        with open(p, "rb", buffering=_READ_BUFFER_SIZE) as f:
             for line in f:
                 line = line.strip()
                 if line:
                     yield _loads(line)
 
     elif suffixes.endswith(".json.gz"):
-        with gzip.open(p, "rt", encoding="utf-8") as f:
-            data = _json_stdlib.load(f)
+        with gzip.open(p, "rb") as f:
+            data = _loads(f.read())
         for rec in data:
             yield rec
 
     elif suffixes.endswith(".json"):
-        with open(p, "r", encoding="utf-8") as f:
-            data = _json_stdlib.load(f)
+        with open(p, "rb") as f:
+            data = _loads(f.read())
         for rec in data:
             yield rec
 
