@@ -39,26 +39,7 @@ app_state = {
     "last_run_source": None
 }
 
-# Pre-warm: rank sample candidates on startup so the dashboard has data immediately.
-if os.environ.get("REDROB_RANK_ON_START", "1") == "1" and os.path.exists("sample_data/sample_candidates.json"):
-    print("Pre-warming: ranking sample candidates on startup...")
-    import time
-    t0 = time.time()
-    try:
-        from src.ranker import rank_candidates
-        from src.data_loader import load_candidates
-        from src.honeypot import detect_honeypot_flags
-        candidates = list(load_candidates("sample_data/sample_candidates.json"))
-        ranked, honeypot_count, total_scored, honeypots_info = rank_candidates(candidates, top_n=50)
-        honeypots = []
-        for cand in candidates:
-            flags = detect_honeypot_flags(cand)
-            if len(flags) >= 2:
-                honeypots.append({"candidate_id": cand.get("candidate_id"), "name": cand.get("profile", {}).get("anonymized_name"), "flags": flags})
-        app_state.update({"pool": candidates, "ranked": ranked, "honeypot_count": honeypot_count, "total_scored": total_scored, "honeypots": honeypots, "runtime_seconds": time.time() - t0, "last_run_source": "auto-startup"})
-        print(f"Pre-warm complete: {len(ranked)} ranked ({time.time() - t0:.1f}s)")
-    except Exception as e:
-        print(f"Pre-warm skipped: {e}")
+
 
 
 def pipeline_snapshot() -> Dict[str, Any]:
