@@ -1,3 +1,13 @@
+---
+title: Redrob Ranker
+emoji: 🚀
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+pinned: false
+app_port: 7860
+---
+
 <div align="center">
   <img src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f680/512.gif" width="120" alt="Colorful Animated Rocket Icon"/>
   <h1 style="font-size: 3rem; margin-top: 20px;">Redrob Candidate Ranker</h1>
