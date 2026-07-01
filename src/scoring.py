@@ -135,8 +135,27 @@ def score_all(candidates: List[Dict[str, Any]], semantic_backend=None, top_n: in
     Scores every candidate and returns a list of result dicts, UNSORTED.
     Honeypots are excluded outright (not merely penalized) and reported separately.
     """
+    honeypot_count = 0
+    honeypots_info = []
+    
+    viable_candidates = []
+    for candidate in candidates:
+        flags = honeypot.detect_honeypot_flags(candidate)
+        if len(flags) >= 2:
+            honeypot_count += 1
+            honeypots_info.append({
+                "candidate_id": candidate.get("candidate_id"),
+                "name": candidate.get("profile", {}).get("anonymized_name"),
+                "flags": flags
+            })
+        elif _has_must_have_skill(candidate):
+            viable_candidates.append(candidate)
+            
+    if not viable_candidates:
+        return [], honeypot_count, honeypots_info
+
     # ---- Build the corpus once for the semantic backend (fit on candidate pool + JD facets) ----
-    candidate_texts = [features._career_text(c) for c in candidates]
+    candidate_texts = [features._career_text(c) for c in viable_candidates]
 
     if semantic_backend is None:
         from .semantic import get_backend
@@ -162,8 +181,6 @@ def score_all(candidates: List[Dict[str, Any]], semantic_backend=None, top_n: in
     semantic_scores_norm = np.clip((semantic_scores - lo) / span, 0.0, 1.0)
 
     heap = []
-    honeypot_count = 0
-    honeypots_info = []
 
     semantic_weight = config.COMPONENT_WEIGHTS.get("semantic_career_fit", 0.22)
     max_other_components = 1.0 - semantic_weight
@@ -174,16 +191,7 @@ def score_all(candidates: List[Dict[str, Any]], semantic_backend=None, top_n: in
     def get_comp_id(cid: str) -> str:
         return "".join(char_map.get(c, c) for c in cid)
 
-    for idx, candidate in enumerate(candidates):
-        flags = honeypot.detect_honeypot_flags(candidate)
-        if len(flags) >= 2:
-            honeypot_count += 1
-            honeypots_info.append({
-                "candidate_id": candidate.get("candidate_id"),
-                "name": candidate.get("profile", {}).get("anonymized_name"),
-                "flags": flags
-            })
-            continue  # excluded entirely, not ranked
+    for idx, candidate in enumerate(viable_candidates):
 
         # Pruning check
         if len(heap) >= top_n:
