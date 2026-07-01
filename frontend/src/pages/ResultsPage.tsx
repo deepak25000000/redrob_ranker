@@ -70,16 +70,16 @@ export default function ResultsPage() {
 
   const sortIndicator = (key: SortKey) => {
     if (sortKey !== key) return null;
-    return <span className="ml-1">{sortDir === 'asc' ? '↑' : '↓'}</span>;
+    return <span className="ml-1 text-evidence">{sortDir === 'asc' ? '↑' : '↓'}</span>;
   };
 
   if (loading) {
     return (
       <div className="flex-1 flex flex-col p-8 max-w-7xl mx-auto w-full">
         <div className="skeleton h-10 w-64 mb-8" />
-        <div className="bg-card border-2 border-rule shadow-sm flex-1 p-8 space-y-4">
+        <div className="bg-card border border-rule/30 shadow-sm flex-1 p-8 space-y-4 rounded-xl">
           {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="skeleton h-12 w-full" style={{ animationDelay: `${i * 50}ms` }} />
+            <div key={i} className="skeleton h-12 w-full rounded-lg" style={{ animationDelay: `${i * 50}ms` }} />
           ))}
         </div>
       </div>
@@ -88,16 +88,16 @@ export default function ResultsPage() {
 
   return (
     <div className="flex-1 flex flex-col p-5 md:p-8 max-w-7xl mx-auto w-full animate-fade-in">
-      <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-4 mb-6 border-b-2 border-rule pb-4">
+      <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-4 mb-6 border-b border-rule/30 pb-4">
         <div>
-          <h1 className="text-4xl font-display mb-1">Results Ledger</h1>
-          <p className="text-ink/60 text-sm flex items-center gap-4">
+          <h1 className="text-4xl font-display mb-1 text-white">Results Ledger</h1>
+          <p className="text-[#94A3B8] text-sm flex items-center gap-4">
             <span className="flex items-center gap-1"><Users size={14} /> {ranked.length} candidates</span>
             <span className="flex items-center gap-1"><TrendingUp size={14} /> scores up to {maxScore.toFixed(3)}</span>
           </p>
         </div>
         <div className="flex gap-3">
-          <Link to="/honeypots" className="px-5 py-2 border-2 border-caution text-caution hover:bg-caution hover:text-paper font-medium text-sm transition-all focus:outline-none focus:ring-2 focus:ring-caution focus:ring-offset-2 focus:ring-offset-paper flex items-center gap-1.5">
+          <Link to="/honeypots" className="px-5 py-2 border-2 border-caution/50 text-caution hover:bg-caution/10 font-medium text-sm transition-all focus:outline-none focus:ring-2 focus:ring-caution focus:ring-offset-2 focus:ring-offset-ink rounded-lg flex items-center gap-1.5">
             <Trophy size={14} />
             Honeypots
           </Link>
@@ -110,7 +110,7 @@ export default function ResultsPage() {
 
       <div className="flex flex-col sm:flex-row gap-3 mb-5 items-start sm:items-center justify-between">
         <div className="relative w-full sm:w-72">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/40" />
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#475569]" />
           <input
             type="text"
             value={search}
@@ -119,35 +119,35 @@ export default function ResultsPage() {
             className="input-field w-full pl-9"
           />
         </div>
-        <div className="text-xs font-mono text-ink/50">
+        <div className="text-xs font-mono text-[#475569]">
           {filtered.length === ranked.length
             ? `${ranked.length} total`
             : `${filtered.length} of ${ranked.length} matching`}
         </div>
       </div>
 
-      <div className="bg-card border-2 border-rule shadow-sm overflow-hidden flex-1 flex flex-col">
+      <div className="bg-card border border-rule/30 shadow-sm overflow-hidden flex-1 flex flex-col rounded-xl">
         <div className="overflow-x-auto flex-1">
           <table className="w-full text-left border-collapse">
-            <thead className="sticky top-0 bg-paper z-10 shadow-sm">
+            <thead className="sticky top-0 bg-ink z-10">
               <tr>
-                <th className="p-4 text-[11px] font-mono font-bold uppercase tracking-widest text-ink/50 border-b border-rule w-16">
-                  <button onClick={() => toggleSort('rank')} className="flex items-center hover:text-ink transition-colors">
+                <th className="p-4 text-[11px] font-mono font-bold uppercase tracking-widest text-[#64748B] border-b border-rule/30 w-16">
+                  <button onClick={() => toggleSort('rank')} className="flex items-center hover:text-white transition-colors">
                     Rank {sortIndicator('rank')}
                   </button>
                 </th>
-                <th className="p-4 text-[11px] font-mono font-bold uppercase tracking-widest text-ink/50 border-b border-rule w-44">
-                  <button onClick={() => toggleSort('candidate_id')} className="flex items-center hover:text-ink transition-colors">
+                <th className="p-4 text-[11px] font-mono font-bold uppercase tracking-widest text-[#64748B] border-b border-rule/30 w-44">
+                  <button onClick={() => toggleSort('candidate_id')} className="flex items-center hover:text-white transition-colors">
                     Candidate ID {sortIndicator('candidate_id')}
                   </button>
                 </th>
-                <th className="p-4 text-[11px] font-mono font-bold uppercase tracking-widest text-ink/50 border-b border-rule w-32">
-                  <button onClick={() => toggleSort('score')} className="flex items-center hover:text-ink transition-colors">
+                <th className="p-4 text-[11px] font-mono font-bold uppercase tracking-widest text-[#64748B] border-b border-rule/30 w-32">
+                  <button onClick={() => toggleSort('score')} className="flex items-center hover:text-white transition-colors">
                     Score {sortIndicator('score')}
                   </button>
                 </th>
-                <th className="p-4 text-[11px] font-mono font-bold uppercase tracking-widest text-ink/50 border-b border-rule">Reasoning Overview</th>
-                <th className="p-4 text-[11px] font-mono font-bold uppercase tracking-widest text-ink/50 border-b border-rule text-right w-32">Evidence</th>
+                <th className="p-4 text-[11px] font-mono font-bold uppercase tracking-widest text-[#64748B] border-b border-rule/30">Reasoning Overview</th>
+                <th className="p-4 text-[11px] font-mono font-bold uppercase tracking-widest text-[#64748B] border-b border-rule/30 text-right w-32">Evidence</th>
               </tr>
             </thead>
             <tbody className="text-sm">
@@ -157,38 +157,38 @@ export default function ResultsPage() {
                 return (
                   <tr
                     key={c.candidate_id}
-                    className="border-b border-rule hover:bg-paper/80 transition-all group animate-fade-in-fast"
+                    className="border-b border-rule/20 hover:bg-white/[0.02] transition-all group animate-fade-in-fast"
                     style={{ animationDelay: `${(i % perPage) * 20}ms` }}
                   >
-                    <td className={`p-4 font-mono ${isTop5 ? 'font-bold text-ink' : 'text-ink/60'}`}>
+                    <td className={`p-4 font-mono ${isTop5 ? 'font-bold text-white' : 'text-[#64748B]'}`}>
                       <div className="flex items-center gap-2">
                         {isTop5 && <Trophy size={12} className="text-evidence" />}
                         {c.rank.toString().padStart(3, '0')}
                       </div>
                     </td>
-                    <td className={`p-4 font-mono ${isTop5 ? 'font-bold' : ''}`}>
+                    <td className={`p-4 font-mono ${isTop5 ? 'font-bold text-white' : 'text-[#E2E8F0]'}`}>
                       {c.candidate_id}
                     </td>
                     <td className="p-4 font-mono">
                       <div className="flex items-center gap-2">
-                        <span className={isTop5 ? 'text-trust font-bold' : 'text-ink'}>{c.score.toFixed(3)}</span>
+                        <span className={isTop5 ? 'text-trust font-bold' : 'text-[#E2E8F0]'}>{c.score.toFixed(3)}</span>
                         <div className="hidden sm:block w-16 h-1.5 bg-rule/30 rounded-full overflow-hidden">
                           <div
-                            className={`h-full rounded-full transition-all duration-700 ${isTop5 ? 'bg-trust' : 'bg-evidence/50'}`}
+                            className={`h-full rounded-full transition-all duration-700 ${isTop5 ? 'bg-trust' : 'bg-evidence/40'}`}
                             style={{ width: `${pct}%` }}
                           />
                         </div>
                       </div>
                     </td>
                     <td className="p-4 pr-12">
-                      <div className="truncate max-w-2xl opacity-70 group-hover:opacity-100 transition-opacity text-xs leading-relaxed">
+                      <div className="truncate max-w-2xl opacity-60 group-hover:opacity-100 transition-opacity text-xs leading-relaxed text-[#94A3B8]">
                         {c.reasoning}
                       </div>
                     </td>
                     <td className="p-4 text-right">
                       <Link
                         to={`/results/${c.candidate_id}`}
-                        className="inline-flex items-center gap-1 font-mono text-[11px] font-bold text-evidence hover:text-ink transition-colors focus:outline-none focus:underline"
+                        className="inline-flex items-center gap-1 font-mono text-[11px] font-bold text-evidence hover:text-white transition-colors focus:outline-none focus:underline"
                       >
                         OPEN <span aria-hidden="true">→</span>
                       </Link>
@@ -198,11 +198,11 @@ export default function ResultsPage() {
               })}
               {paginated.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="p-16 text-center font-mono text-sm opacity-50">
+                  <td colSpan={5} className="p-16 text-center font-mono text-sm text-[#64748B]">
                     {search ? 'No candidates match your search.' : (
                       <>
                         NO RESULTS LEDGER FOUND.<br /><br />
-                        <Link to="/run" className="text-ink underline hover:text-evidence">Execute pipeline</Link> first.
+                        <Link to="/run" className="text-evidence underline hover:text-white">Execute pipeline</Link> first.
                       </>
                     )}
                   </td>
@@ -214,15 +214,15 @@ export default function ResultsPage() {
       </div>
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-between mt-5 pt-4 border-t border-rule/50">
-          <div className="text-xs font-mono text-ink/50">
+        <div className="flex items-center justify-between mt-5 pt-4 border-t border-rule/20">
+          <div className="text-xs font-mono text-[#475569]">
             Page {page} of {totalPages}
           </div>
           <div className="flex gap-2">
             <button
               onClick={() => setPage(p => Math.max(1, p - 1))}
               disabled={page === 1}
-              className="btn-outline flex items-center gap-1 text-xs disabled:opacity-30"
+              className="btn-outline flex items-center gap-1 text-xs disabled:opacity-30 text-[#94A3B8]"
             >
               <ChevronLeft size={14} />
               Prev
@@ -235,7 +235,7 @@ export default function ResultsPage() {
                 <button
                   key={p}
                   onClick={() => setPage(p)}
-                  className={`w-8 h-8 text-xs font-mono rounded transition-all ${p === page ? 'bg-ink text-paper' : 'border border-rule hover:bg-card'}`}
+                  className={`w-8 h-8 text-xs font-mono rounded-lg transition-all ${p === page ? 'bg-evidence text-ink font-bold' : 'border border-rule/30 text-[#94A3B8] hover:bg-white/5'}`}
                 >
                   {p}
                 </button>
@@ -244,7 +244,7 @@ export default function ResultsPage() {
             <button
               onClick={() => setPage(p => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
-              className="btn-outline flex items-center gap-1 text-xs disabled:opacity-30"
+              className="btn-outline flex items-center gap-1 text-xs disabled:opacity-30 text-[#94A3B8]"
             >
               Next
               <ChevronRight size={14} />

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { Menu, X, Sparkles } from 'lucide-react';
+import { Menu, X, Sparkles, BarChart3, Shield, Download } from 'lucide-react';
 import RunPage from './pages/RunPage';
 import ResultsPage from './pages/ResultsPage';
 import CandidateDetail from './pages/CandidateDetail';
@@ -24,7 +24,7 @@ function App() {
   return (
     <Router>
       <ScrollToTop />
-      <div className="min-h-screen flex flex-col font-body bg-paper text-ink selection:bg-evidence/30">
+      <div className="min-h-screen flex flex-col font-body bg-ink text-[#E2E8F0] selection:bg-evidence/30">
         <Header />
         <main className="flex-1 flex flex-col relative">
           <Routes>
@@ -37,6 +37,7 @@ function App() {
             <Route path="/export" element={<PageTransition><ExportPage /></PageTransition>} />
           </Routes>
         </main>
+        <Footer />
       </div>
     </Router>
   );
@@ -46,49 +47,77 @@ function Header() {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const navLink = (path: string, label: string) => {
+  const navLink = (path: string, label: string, icon: React.ReactNode) => {
     const isActive = location.pathname.startsWith(path);
     return (
       <Link
         to={path}
-        className={`relative text-xs md:text-sm font-medium transition-colors ${isActive ? 'text-evidence' : 'text-ink/70 hover:text-ink'}`}
+        className={`relative flex items-center gap-1.5 text-xs md:text-sm font-medium transition-all px-3 py-1.5 rounded-lg ${isActive ? 'text-evidence bg-evidence/10' : 'text-[#94A3B8] hover:text-white hover:bg-white/5'}`}
       >
+        {icon}
         {label}
-        {isActive && <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-evidence rounded-full" />}
       </Link>
     );
   };
 
   return (
-    <header className="border-b border-rule/60 glass sticky top-0 z-50 px-5 md:px-8 py-4 flex items-center justify-between">
-      <Link to="/" className="flex items-center gap-2 text-xl md:text-2xl font-display font-semibold tracking-tight group">
-        <Sparkles size={22} className="text-evidence group-hover:scale-110 transition-transform" />
-        <span>Redrob Ranker</span>
+    <header className="glass sticky top-0 z-50 px-5 md:px-8 py-3 flex items-center justify-between">
+      <Link to="/" className="flex items-center gap-2.5 group">
+        <div className="w-8 h-8 rounded-lg bg-evidence/15 border border-evidence/30 flex items-center justify-center group-hover:bg-evidence/25 transition-all">
+          <Sparkles size={16} className="text-evidence" />
+        </div>
+        <span className="text-lg md:text-xl font-display font-semibold tracking-tight text-white">
+          Redrob <span className="text-evidence">Ranker</span>
+        </span>
       </Link>
 
-      <nav className="hidden md:flex gap-8 items-center">
-        {navLink('/run', 'Run Ranking')}
-        {navLink('/results', 'Results Ledger')}
-        {navLink('/methodology', 'Methodology')}
+      <nav className="hidden md:flex gap-1 items-center">
+        {navLink('/run', 'Run', <BarChart3 size={14} />)}
+        {navLink('/results', 'Results', <Shield size={14} />)}
+        {navLink('/methodology', 'Methodology', <Download size={14} />)}
       </nav>
 
       <button
         type="button"
-        className="md:hidden p-2 text-ink/70 hover:text-ink transition-colors"
+        className="md:hidden p-2 text-[#94A3B8] hover:text-white transition-colors"
         onClick={() => setMobileOpen(!mobileOpen)}
         aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
       >
         {mobileOpen ? <X size={22} /> : <Menu size={22} />}
       </button>
 
-        {mobileOpen && (
-          <div className="absolute top-full left-0 right-0 glass-dark border-b border-rule/30 p-5 flex flex-col gap-4 md:hidden animate-slide-up-sm">
-            <Link to="/run" onClick={() => setMobileOpen(false)} className="text-sm font-medium text-card hover:text-evidence transition-colors">Run Ranking</Link>
-            <Link to="/results" onClick={() => setMobileOpen(false)} className="text-sm font-medium text-card hover:text-evidence transition-colors">Results Ledger</Link>
-            <Link to="/methodology" onClick={() => setMobileOpen(false)} className="text-sm font-medium text-card hover:text-evidence transition-colors">Methodology</Link>
-          </div>
-        )}
+      {mobileOpen && (
+        <div className="absolute top-full left-0 right-0 glass-dark border-b border-rule/30 p-5 flex flex-col gap-3 md:hidden animate-slide-up-sm">
+          <Link to="/run" onClick={() => setMobileOpen(false)} className="flex items-center gap-2 text-sm font-medium text-[#94A3B8] hover:text-evidence transition-colors px-3 py-2 rounded-lg hover:bg-white/5">
+            <BarChart3 size={14} /> Run Ranking
+          </Link>
+          <Link to="/results" onClick={() => setMobileOpen(false)} className="flex items-center gap-2 text-sm font-medium text-[#94A3B8] hover:text-evidence transition-colors px-3 py-2 rounded-lg hover:bg-white/5">
+            <Shield size={14} /> Results Ledger
+          </Link>
+          <Link to="/methodology" onClick={() => setMobileOpen(false)} className="flex items-center gap-2 text-sm font-medium text-[#94A3B8] hover:text-evidence transition-colors px-3 py-2 rounded-lg hover:bg-white/5">
+            <Download size={14} /> Methodology
+          </Link>
+        </div>
+      )}
     </header>
+  );
+}
+
+function Footer() {
+  return (
+    <footer className="border-t border-rule/30 px-5 md:px-8 py-6">
+      <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-2 text-xs text-[#64748B] font-mono">
+          <Sparkles size={12} className="text-evidence/60" />
+          Redrob Ranker — Evidence-first candidate ranking
+        </div>
+        <div className="flex items-center gap-4">
+          <Link to="/methodology" className="text-xs text-[#64748B] hover:text-evidence transition-colors font-mono">Methodology</Link>
+          <Link to="/honeypots" className="text-xs text-[#64748B] hover:text-evidence transition-colors font-mono">Honeypots</Link>
+          <Link to="/export" className="text-xs text-[#64748B] hover:text-evidence transition-colors font-mono">Export</Link>
+        </div>
+      </div>
+    </footer>
   );
 }
 
@@ -162,13 +191,13 @@ function Overview() {
             <Link to="/run" className="secondary-action">Upload candidate file</Link>
           </div>
           {demoState === 'error' && (
-            <div className="demo-error">
+            <div className="demo-error rounded-lg">
               <span className="font-bold block mb-1"># Diagnostic Alert</span>
               Could not reach the ranking server. Start the backend or use the bundled sample link below.
               <button
                 type="button"
                 onClick={runMiniDemo}
-                className="block mt-3 text-evidence underline decoration-evidence/50 hover:text-card transition-colors text-xs font-mono"
+                className="block mt-3 text-evidence underline decoration-evidence/30 hover:text-white transition-colors text-xs font-mono"
               >
                 Retry
               </button>
