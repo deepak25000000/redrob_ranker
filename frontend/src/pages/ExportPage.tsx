@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, XCircle, Download, AlertTriangle, Loader } from 'lucide-react';
+import { CheckCircle, XCircle, Download, AlertTriangle, Loader, FileText, Table } from 'lucide-react';
 import { apiUrl } from '../lib/api';
 
 interface ValidationCheck {
@@ -14,6 +14,7 @@ export default function ExportPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [visibleChecks, setVisibleChecks] = useState(0);
+  const [format, setFormat] = useState<'csv' | 'xlsx'>('csv');
 
   useEffect(() => {
     fetch(apiUrl('/api/validate'), { method: 'POST' })
@@ -43,10 +44,10 @@ export default function ExportPage() {
       <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-4 mb-8 pb-4 border-b border-rule/30">
         <div>
           <h1 className="text-4xl font-display mb-1 text-white">Export & Validate</h1>
-          <p className="text-sm text-[#94A3B8] font-mono">RUNNING VALIDATE_SUBMISSION.PY RULES DIRECTLY</p>
+          <p className="text-sm text-[#94A3B8] font-mono">VALIDATE & EXPORT RANKED DATA</p>
         </div>
         <Link to="/results" className="text-sm font-medium text-[#94A3B8] hover:text-evidence underline decoration-rule/50 hover:decoration-evidence transition-all flex items-center gap-1.5">
-          <ArrowLeft size={14} /> Return to Ledger
+          Return to Ledger
         </Link>
       </div>
 
@@ -105,27 +106,56 @@ export default function ExportPage() {
         )}
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4 items-start">
-        {allPassed ? (
+      {allPassed && (
+        <div className="bg-card border border-rule/30 shadow-sm p-6 md:p-8 rounded-xl">
+          <h2 className="text-xl font-display mb-4 text-white">Download Format</h2>
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <button
+              onClick={() => setFormat('csv')}
+              className={`flex-1 p-5 rounded-xl border-2 text-left transition-all ${
+                format === 'csv'
+                  ? 'border-evidence bg-evidence/10'
+                  : 'border-rule/30 hover:border-rule/60'
+              }`}
+            >
+              <FileText size={24} className={format === 'csv' ? 'text-evidence' : 'text-[#64748B]'} />
+              <div className={`text-base font-semibold mt-2 ${format === 'csv' ? 'text-white' : 'text-[#94A3B8]'}`}>CSV</div>
+              <div className="text-xs text-[#64748B] font-mono mt-1">Comma-separated values. Opens in Excel, Google Sheets, or any text editor.</div>
+            </button>
+            <button
+              onClick={() => setFormat('xlsx')}
+              className={`flex-1 p-5 rounded-xl border-2 text-left transition-all ${
+                format === 'xlsx'
+                  ? 'border-evidence bg-evidence/10'
+                  : 'border-rule/30 hover:border-rule/60'
+              }`}
+            >
+              <Table size={24} className={format === 'xlsx' ? 'text-trust' : 'text-[#64748B]'} />
+              <div className={`text-base font-semibold mt-2 ${format === 'xlsx' ? 'text-white' : 'text-[#94A3B8]'}`}>Excel (.xlsx)</div>
+              <div className="text-xs text-[#64748B] font-mono mt-1">Formatted Excel workbook with styled headers and wrapped text.</div>
+            </button>
+          </div>
           <a
-            href={apiUrl('/api/export.csv')}
-            download="submission.csv"
-            className="btn-ink flex items-center gap-2 px-8 py-4 text-base group"
+            href={apiUrl(`/api/export.${format}`)}
+            download={`submission.${format}`}
+            className="btn-ink flex items-center gap-2 px-8 py-4 text-base group w-full justify-center"
           >
             <Download size={18} className="group-hover:translate-y-0.5 transition-transform" />
-            Download Spec-Compliant CSV
+            Download as {format.toUpperCase()}
           </a>
-        ) : (
-          <div className="p-5 bg-caution/10 border-l-4 border-caution text-sm w-full animate-slide-up rounded-lg">
-            <strong className="text-caution uppercase tracking-wide text-xs mb-2 block flex items-center gap-1.5">
-              <AlertTriangle size={12} /> Export Disabled
-            </strong>
-            <p className="text-[#FCA5A5] leading-relaxed">
-              Validation failed. If you are running the bundled sample (50 candidates), this is expected because the spec requires exactly 100 rows. Upload a valid run file to proceed.
-            </p>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {!allPassed && !loading && !error && (
+        <div className="p-5 bg-caution/10 border-l-4 border-caution text-sm animate-slide-up rounded-lg">
+          <strong className="text-caution uppercase tracking-wide text-xs mb-2 block flex items-center gap-1.5">
+            <AlertTriangle size={12} /> Export Disabled
+          </strong>
+          <p className="text-[#FCA5A5] leading-relaxed">
+            Validation failed. If you are running the bundled sample (50 candidates), this is expected because the spec requires exactly 100 rows. Upload a valid run file to proceed.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

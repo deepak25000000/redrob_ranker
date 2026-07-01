@@ -306,6 +306,59 @@ async def export_csv():
         headers={"Content-Disposition": "attachment; filename=submission.csv"}
     )
 
+@app.get("/api/export.xlsx")
+async def export_xlsx():
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Ranked Candidates"
+
+    header_font = Font(name="Calibri", bold=True, color="FFFFFF", size=11)
+    header_fill = PatternFill(start_color="F59E0B", end_color="F59E0B", fill_type="solid")
+    header_align = Alignment(horizontal="center", vertical="center")
+    thin_border = Border(
+        left=Side(style="thin", color="D1D5DB"),
+        right=Side(style="thin", color="D1D5DB"),
+        top=Side(style="thin", color="D1D5DB"),
+        bottom=Side(style="thin", color="D1D5DB"),
+    )
+
+    headers = ["candidate_id", "rank", "score", "reasoning"]
+    for col, h in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=h)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = header_align
+        cell.border = thin_border
+
+    data_font = Font(name="Consolas", size=10)
+    data_align = Alignment(vertical="center")
+    for i, r in enumerate(app_state["ranked"], start=1):
+        ws.cell(row=i + 1, column=1, value=r["candidate_id"]).font = data_font
+        ws.cell(row=i + 1, column=2, value=i).font = data_font
+        ws.cell(row=i + 1, column=3, value=r["score"]).font = data_font
+        cell = ws.cell(row=i + 1, column=4, value=r["reasoning"])
+        cell.font = data_font
+        cell.alignment = Alignment(wrap_text=True, vertical="top")
+        for col in range(1, 5):
+            ws.cell(row=i + 1, column=col).border = thin_border
+            ws.cell(row=i + 1, column=col).alignment = data_align
+
+    ws.column_dimensions["A"].width = 18
+    ws.column_dimensions["B"].width = 8
+    ws.column_dimensions["C"].width = 12
+    ws.column_dimensions["D"].width = 80
+
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=submission.xlsx"}
+    )
+
 @app.get("/api/ranking")
 async def get_ranking():
     ranked = app_state.get("ranked", [])
