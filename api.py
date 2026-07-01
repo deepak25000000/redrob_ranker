@@ -144,14 +144,14 @@ async def rank(
     def _run_pipeline_bg():
         try:
             t0 = time.time()
-            _jobs[job_id]["progress"] = "Loading candidates from file..."
-            candidates = list(load_candidates(path))
-            _jobs[job_id]["progress"] = f"Loaded {len(candidates)} candidates. Scoring..."
+            _jobs[job_id]["progress"] = "Streaming and scoring candidates..."
+            from src.data_loader import iter_candidates
+            candidate_stream = iter_candidates(path)
 
-            ranked, honeypot_count, total_scored, honeypots = rank_candidates(candidates, top_n=top_n)
+            ranked, honeypot_count, total_scored, honeypots, viable_candidates = rank_candidates(candidate_stream, top_n=top_n)
 
             t1 = time.time()
-            app_state["pool"] = candidates
+            app_state["pool"] = viable_candidates
             app_state["ranked"] = ranked
             app_state["honeypot_count"] = honeypot_count
             app_state["total_scored"] = total_scored
@@ -266,7 +266,7 @@ async def rerank(req: RerankRequest):
     original_weights = config.COMPONENT_WEIGHTS.copy()
     config.COMPONENT_WEIGHTS.update(req.weights)
     
-    ranked, honeypot_count, total_scored, _honeypots = rank_candidates(app_state["pool"], top_n=config.TOP_N)
+    ranked, honeypot_count, total_scored, _honeypots, _ = rank_candidates(app_state["pool"], top_n=config.TOP_N)
     app_state["ranked"] = ranked
     
     # Restore original

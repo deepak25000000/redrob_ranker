@@ -139,7 +139,9 @@ def score_all(candidates: List[Dict[str, Any]], semantic_backend=None, top_n: in
     honeypots_info = []
     
     viable_candidates = []
+    total_candidates = 0
     for candidate in candidates:
+        total_candidates += 1
         flags = honeypot.detect_honeypot_flags(candidate)
         if len(flags) >= 2:
             honeypot_count += 1
@@ -152,7 +154,7 @@ def score_all(candidates: List[Dict[str, Any]], semantic_backend=None, top_n: in
             viable_candidates.append(candidate)
             
     if not viable_candidates:
-        return [], honeypot_count, honeypots_info
+        return [], honeypot_count, honeypots_info, total_candidates, []
 
     # ---- Build the corpus once for the semantic backend (fit on candidate pool + JD facets) ----
     candidate_texts = [features._career_text(c) for c in viable_candidates]
@@ -279,4 +281,4 @@ def score_all(candidates: List[Dict[str, Any]], semantic_backend=None, top_n: in
     results.sort(key=lambda r: r["candidate_id"])  # stable pre-sort for deterministic tie-breaks
     results.sort(key=lambda r: r["score"], reverse=True)
 
-    return results, honeypot_count, honeypots_info
+    return results, honeypot_count, honeypots_info, total_candidates, viable_candidates
