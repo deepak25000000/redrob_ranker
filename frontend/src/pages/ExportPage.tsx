@@ -106,53 +106,51 @@ export default function ExportPage() {
         )}
       </div>
 
-      {allPassed && (
-        <div className="bg-card border border-rule/30 shadow-sm p-6 md:p-8 rounded-xl">
-          <h2 className="text-xl font-display mb-4 text-white">Download Format</h2>
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
-            <button
-              onClick={() => setFormat('csv')}
-              className={`flex-1 p-5 rounded-xl border-2 text-left transition-all ${
-                format === 'csv'
-                  ? 'border-evidence bg-evidence/10'
-                  : 'border-rule/30 hover:border-rule/60'
-              }`}
-            >
-              <FileText size={24} className={format === 'csv' ? 'text-evidence' : 'text-[#64748B]'} />
-              <div className={`text-base font-semibold mt-2 ${format === 'csv' ? 'text-white' : 'text-[#94A3B8]'}`}>CSV</div>
-              <div className="text-xs text-[#64748B] font-mono mt-1">Comma-separated values. Opens in Excel, Google Sheets, or any text editor.</div>
-            </button>
-            <button
-              onClick={() => setFormat('xlsx')}
-              className={`flex-1 p-5 rounded-xl border-2 text-left transition-all ${
-                format === 'xlsx'
-                  ? 'border-evidence bg-evidence/10'
-                  : 'border-rule/30 hover:border-rule/60'
-              }`}
-            >
-              <Table size={24} className={format === 'xlsx' ? 'text-trust' : 'text-[#64748B]'} />
-              <div className={`text-base font-semibold mt-2 ${format === 'xlsx' ? 'text-white' : 'text-[#94A3B8]'}`}>Excel (.xlsx)</div>
-              <div className="text-xs text-[#64748B] font-mono mt-1">Formatted Excel workbook with styled headers and wrapped text.</div>
-            </button>
-          </div>
-          <a
-            href={apiUrl(`/api/export.${format}`)}
-            download={`submission.${format}`}
-            className="btn-ink flex items-center gap-2 px-8 py-4 text-base group w-full justify-center"
+      <div className="bg-card border border-rule/30 shadow-sm p-6 md:p-8 rounded-xl">
+        <h2 className="text-xl font-display mb-4 text-white">Download Format</h2>
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <button
+            onClick={() => setFormat('csv')}
+            className={`flex-1 p-5 rounded-xl border-2 text-left transition-all ${
+              format === 'csv'
+                ? 'border-evidence bg-evidence/10'
+                : 'border-rule/30 hover:border-rule/60'
+            }`}
           >
-            <Download size={18} className="group-hover:translate-y-0.5 transition-transform" />
-            Download as {format.toUpperCase()}
-          </a>
+            <FileText size={24} className={format === 'csv' ? 'text-evidence' : 'text-[#64748B]'} />
+            <div className={`text-base font-semibold mt-2 ${format === 'csv' ? 'text-white' : 'text-[#94A3B8]'}`}>CSV</div>
+            <div className="text-xs text-[#64748B] font-mono mt-1">Comma-separated values. Opens in Excel, Google Sheets, or any text editor.</div>
+          </button>
+          <button
+            onClick={() => setFormat('xlsx')}
+            className={`flex-1 p-5 rounded-xl border-2 text-left transition-all ${
+              format === 'xlsx'
+                ? 'border-evidence bg-evidence/10'
+                : 'border-rule/30 hover:border-rule/60'
+            }`}
+          >
+            <Table size={24} className={format === 'xlsx' ? 'text-trust' : 'text-[#64748B]'} />
+            <div className={`text-base font-semibold mt-2 ${format === 'xlsx' ? 'text-white' : 'text-[#94A3B8]'}`}>Excel (.xlsx)</div>
+            <div className="text-xs text-[#64748B] font-mono mt-1">Formatted Excel workbook with styled headers and wrapped text.</div>
+          </button>
         </div>
-      )}
+        <a
+          href={apiUrl(`/api/export.${format}`)}
+          download={`submission.${format}`}
+          className="btn-ink flex items-center gap-2 px-8 py-4 text-base group w-full justify-center"
+        >
+          <Download size={18} className="group-hover:translate-y-0.5 transition-transform" />
+          Download as {format.toUpperCase()}
+        </a>
+      </div>
 
       {!allPassed && !loading && !error && (
-        <div className="p-5 bg-caution/10 border-l-4 border-caution text-sm animate-slide-up rounded-lg">
+        <div className="mt-8 p-5 bg-caution/10 border-l-4 border-caution text-sm animate-slide-up rounded-lg">
           <strong className="text-caution uppercase tracking-wide text-xs mb-2 block flex items-center gap-1.5">
-            <AlertTriangle size={12} /> Export Disabled
+            <AlertTriangle size={12} /> Validation Warning
           </strong>
           <p className="text-[#FCA5A5] leading-relaxed">
-            Validation failed. If you are running the bundled sample (50 candidates), this is expected because the spec requires exactly 100 rows. Upload a valid run file to proceed.
+            Validation failed. If you are running a small sample, this is expected because the strict spec requires exactly 100 rows. You can still export your results above!
           </p>
         </div>
       )}
