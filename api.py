@@ -125,9 +125,10 @@ async def rank(
     elif file is not None:
         # Stream upload to a temp file in chunks to avoid loading 100s of MB into memory
         import shutil
+        import asyncio
         suffix = "".join(pathlib.Path(file.filename or "upload").suffixes)
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-            shutil.copyfileobj(file.file, tmp)
+            await asyncio.to_thread(shutil.copyfileobj, file.file, tmp)
             path = tmp.name
         source_name = file.filename or "upload"
     else:
