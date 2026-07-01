@@ -8,6 +8,10 @@ if (!API_BASE) {
       if (window.location.port !== '8000') {
         API_BASE = 'http://localhost:8000';
       }
+    } else if (!window.location.hostname.includes('hf.space')) {
+      // Bulletproof fallback: If deployed on Vercel or Netlify without VITE_API_URL,
+      // route requests to the known Hugging Face backend instead of failing with index.html
+      API_BASE = 'https://deepak2525-redrob-ranker.hf.space';
     }
   }
 }
