@@ -55,26 +55,26 @@ def iter_candidates(path: str) -> Iterator[Dict[str, Any]]:
     elif suffixes.endswith(".csv"):
         import pandas as pd
         df = pd.read_csv(p)
-        for _, row in df.iterrows():
-            d = row.to_dict()
+        records = df.to_dict("records")
+        for d in records:
             for k, v in d.items():
                 if isinstance(v, str) and (v.startswith('[') or v.startswith('{')):
                     try:
-                        d[k] = _json_stdlib.loads(v)
-                    except (ValueError, _json_stdlib.JSONDecodeError):
+                        d[k] = _loads(v)
+                    except Exception:
                         pass
             yield d
 
     elif suffixes.endswith(".xlsx") or suffixes.endswith(".xls"):
         import pandas as pd
         df = pd.read_excel(p)
-        for _, row in df.iterrows():
-            d = row.to_dict()
+        records = df.to_dict("records")
+        for d in records:
             for k, v in d.items():
                 if isinstance(v, str) and (v.startswith('[') or v.startswith('{')):
                     try:
-                        d[k] = _json_stdlib.loads(v)
-                    except (ValueError, _json_stdlib.JSONDecodeError):
+                        d[k] = _loads(v)
+                    except Exception:
                         pass
             yield d
 
